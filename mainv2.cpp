@@ -7,8 +7,9 @@
 #include <conio.h>
 #include <string>
 
-void introduction()
+void introduction(float &accumilator, float &dt, float &speed, std::string &frame)
 {
+
     std::cout << "Welcome to our restaurant" << std::endl;
 }
 
@@ -67,7 +68,7 @@ void hardClear()
 #endif
 }
 
-void chooseFood(std::vector<std::pair<double, std::string>> &foods, std::vector<std::pair<int, double>> &chosenFoods)
+void chooseFood(std::vector<std::pair<double, std::string>> &foods, std::vector<std::pair<int, double>> &chosenFoods, float &accumilator, float &dt, float &speed)
 {
     bool choosingFood = true;
     int index = 0;
@@ -86,7 +87,9 @@ void chooseFood(std::vector<std::pair<double, std::string>> &foods, std::vector<
             initialClear = true;
         }
 
+
         std::string frame;
+        introduction(accumilator, dt, speed, frame);
         for (int i = 0; i < foods.size(); i++)
         {
             if (i == index)
@@ -95,7 +98,7 @@ void chooseFood(std::vector<std::pair<double, std::string>> &foods, std::vector<
             }
             else
             {
-                frame += "$" + std::to_string(foods[i].first) + " " + foods[i].second + '\n';
+                frame += "  $" + std::to_string(foods[i].first) + " " + foods[i].second + '\n';
             }
         }
         std::cout << frame;
@@ -106,7 +109,13 @@ void chooseFood(std::vector<std::pair<double, std::string>> &foods, std::vector<
 
 int main()
 {
+    SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
+
+    float accumilator; // accumilator = speed * dt
+    float dt;
+    float speed = 0.9f;
+
     std::vector<std::pair<double, std::string>> foods = {
         {99.99, "Burger King"},
         {99.99, "Burger King"},
@@ -118,8 +127,7 @@ int main()
 
     std::vector<std::pair<int, double>> chosenFoods; // pair(id, price)
 
-    introduction();
-    chooseFood(foods, chosenFoods);
+    chooseFood(foods, chosenFoods, accumilator, dt, speed);
 
     return 0;
 }
