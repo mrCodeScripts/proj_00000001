@@ -10,6 +10,26 @@
 #include <string>
 #include <vector>
 
+void makeTopBottomEdgeBorder (int bxLen, std::string &rEdgeChar, std::string &lEdgeChar, std::string &midEdge, std::string frame) {
+    for (int i = 0; i < bxLen; i++) {
+        if (i == 0) frame += lEdgeChar;
+        else if (i == bxLen) frame += rEdgeChar;
+        else frame += midEdge;
+    }
+}
+
+void makeTextWithColors (std::string &introPhrase, std::vector<std::pair<std::string, std::string>> &colors, std::string &frame) {
+    int index = 0;
+    for (const char &c : introPhrase)
+    {
+        frame += colors[index].first + std::string(1, c) + colors[index].second;
+        index++;
+        if (index >= colors.size())
+            index = 0;
+    }
+}
+
+
 void introduction(float &accumilator, float &dt, float &speed, std::string &frame, std::chrono::high_resolution_clock::time_point &lastFrame, std::vector<std::pair<std::string, std::string>> &colors)
 {
     auto now = std::chrono::high_resolution_clock::now();
@@ -29,14 +49,21 @@ void introduction(float &accumilator, float &dt, float &speed, std::string &fram
     std::string frame2;
     std::string introPhrase = "Welcome to our restaurant";
 
-    int index = 0;
-    for (const char &c : introPhrase)
-    {
-        frame2 += colors[index].first + std::string(1, c) + colors[index].second;
-        index++;
-        if (index >= colors.size())
-            index = 0;
-    }
+    int introPhraseSize = introPhrase.size();
+    int xTabSize = 5;
+    int yTabSize = 1;
+    int bxLen = xTabSize * 2 + introPhraseSize;
+    std::string lTopEdge = u8"╔";
+    std::string rTopEdge = u8"╗";
+    std::string lBottomEdge = u8"╚";
+    std::string rBottomEdge = u8"╝";
+    std::string midVertEdge = u8"║";
+    std::string midHorEdge = u8"═";
+
+    makeTopBottomEdgeBorder(bxLen, rTopEdge, lTopEdge, midHorEdge, frame2);
+    makeTextWithColors(introPhrase, colors, frame2);
+    makeTopBottomEdgeBorder(bxLen, rBottomEdge, lBottomEdge, midHorEdge, frame2);
+
     frame += frame2;
     frame += '\n';
 }
@@ -155,132 +182,6 @@ int main()
         {"\033[95m", "\033[0m"}, // Bright Magenta
         {"\033[96m", "\033[0m"}, // Bright Cyan
         {"\033[97m", "\033[0m"}  // Bright White
-    };
-    std::vector<std::string> introPhrase = {
-        u8R"(
-██     ██ 
-██     ██ 
-██  █  ██ 
-██ ███ ██ 
- ███ ███  
-        )",
-        u8R"(
-███████ 
-██      
-█████   
-██      
-███████ 
-        )",
-        u8R"(
-██      
-██      
-██      
-██      
-███████ 
-        )",
-        u8R"(
- ██████ 
-██      
-██      
-██      
- ██████ 
-        )",
-        u8R"(
- ██████  
-██    ██ 
-██    ██ 
-██    ██ 
- ██████  
-        )",
-        u8R"(
-███    ███ 
-████  ████ 
-██ ████ ██ 
-██  ██  ██ 
-██      ██ 
-        )",
-        u8R"(
-███████ 
-██      
-█████   
-██      
-███████ 
-        )",
-        u8R"(
-    
-    
-    
-    
-    
-        )",
-        u8R"(
-████████ 
-   ██    
-   ██    
-   ██    
-   ██    
-        )",
-        u8R"(
- ██████  
-██    ██ 
-██    ██ 
-██    ██ 
- ██████  
-        )",
-        u8R"(
-    
-    
-    
-    
-    
-        )",
-        u8R"(
- ██████  
-██    ██ 
-██    ██ 
-██    ██ 
- ██████  
-        )",
-        u8R"(
-██    ██ 
-██    ██ 
-██    ██ 
-██    ██ 
- ██████  
-        )",
-        u8R"(
-██████  
-██   ██ 
-██████  
-██   ██ 
-██   ██ 
-        )",
-        u8R"(
-    
-    
-    
-    
-    
-        )",
-        u8R"(
-██████  
-██   ██ 
-██████  
-██   ██ 
-██   ██ 
-        )",
-        u8R"(
-███████ 
-██      
-█████   
-██      
-███████ 
-        )",
-        u8R"()",
-        u8R"()",
-        u8R"()",
-        u8R"()",
-        u8R"()",
     };
 
     std::vector<std::pair<double, std::string>> foods = {
