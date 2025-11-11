@@ -9,58 +9,108 @@
 #include <thread>
 
 // --- Detect Keyboard ---
-void detectKeyboard (int &index, int maxIndex, int &chosen, bool &keyError) {
-    if (_kbhit()) {
+void detectKeyboard(int &index, int maxIndex, int &chosen, bool &keyError)
+{
+    if (_kbhit())
+    {
         int k = _getch();
-        if (k == 0 || k == 224) { // handle special keys
+        if (k == 0 || k == 224)
+        { // handle special keys
             k = _getch();
-            switch (k) {
-                case 72: // up
-                    keyError = false;
-                    index--;
-                    if (index < 0) index = maxIndex;
-                    break;
-                case 80: // down
-                    keyError = false;
-                    index++;
-                    if (index > maxIndex) index = 0;
-                    break;
-                default:
-                    keyError = true;
-                    break;
+            switch (k)
+            {
+            case 72: // up
+                keyError = false;
+                index--;
+                if (index < 0)
+                    index = maxIndex;
+                break;
+            case 80: // down
+                keyError = false;
+                index++;
+                if (index > maxIndex)
+                    index = 0;
+                break;
+            default:
+                keyError = true;
+                break;
             }
-        } else if (k == 13) { // enter
+        }
+        else if (k == 13)
+        { // enter
             keyError = false;
             chosen = index;
             index = -2;
-        } else {
+        }
+        else
+        {
             keyError = true;
         }
     }
 }
 
+void properClear()
+{
+    HANDLE hout = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD coordinate = {0, 0};
+    SetConsoleCursorPosition(hout, coordinate);
+}
+
+void hideCursor()
+{
+    HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO inf;
+    GetConsoleCursorInfo(handle, &inf);
+    inf.bVisible = false;
+    SetConsoleCursorInfo(handle, &inf);
+}
+
+void hardClearScreen () {
+#ifdef _WIN32
+            system("cls");
+#else
+            system("clear");
+#endif
+}
+
 // --- Generic Menu Function ---
-void choicesYM (int &chosen, std::vector<std::pair<std::string, std::string>> &choices, 
-                const std::string &title) {
+void choicesYM(int &chosen, std::vector<std::pair<std::string, std::string>> &choices,
+               const std::string &title)
+{
     bool choosing = true;
     int index = 0;
     bool keyError = false;
+    bool keyErrorClean = false;
+    bool initialClear = false;
 
-    while (choosing) {
-        system("cls");
+    hideCursor();
+    while (choosing)
+    {
+        if (initialClear && !(keyError))
+        {
+            properClear();
+        }
+        else
+        {
+            hardClearScreen();
+            initialClear = true;
+            keyError = false;
+        }
 
         std::cout << "\n==========================\n";
         std::cout << "| " << title << " |\n";
         std::cout << "==========================\n\n";
 
-        for (int i = 0; i < choices.size(); i++) {
+        for (int i = 0; i < choices.size(); i++)
+        {
             if (i == index)
                 std::cout << "👉 " << choices[i].first << std::endl;
             else
                 std::cout << "   " << choices[i].first << std::endl;
         }
 
-        if (keyError) {
+        if (keyError)
+        {
             std::cout << R"(
 
 ========================================================
@@ -70,35 +120,50 @@ void choicesYM (int &chosen, std::vector<std::pair<std::string, std::string>> &c
         }
 
         detectKeyboard(index, static_cast<int>(choices.size() - 1), chosen, keyError);
-        if (index == -2) choosing = false;
+        if (index == -2)
+            choosing = false;
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        if (keyError) {
+            std::cout << u8R"(
+┌───────────────────┐
+│   INVALID INPUT   │
+└───────────────────┘
+            )" << std::endl;
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
     }
 }
 
 // --- Username & Password ---
-void askUsername (std::string &username, bool &errorName, 
-                  std::vector<std::pair<std::string, std::string>> &allowedUsers) {
+void askUsername(std::string &username, bool &errorName,
+                 std::vector<std::pair<std::string, std::string>> &allowedUsers)
+{
     std::cout << "Username: ";
     std::getline(std::cin, username);
 
     errorName = true;
-    for (const auto &u : allowedUsers) {
-        if (u.first == username) {
+    for (const auto &u : allowedUsers)
+    {
+        if (u.first == username)
+        {
             errorName = false;
             break;
         }
     }
 }
 
-void askPassword (std::string username, std::string &password, bool &errPassword, 
-                  std::vector<std::pair<std::string, std::string>> &allowedUsers) { 
+void askPassword(std::string username, std::string &password, bool &errPassword,
+                 std::vector<std::pair<std::string, std::string>> &allowedUsers)
+{
     std::cout << "Password: ";
     std::getline(std::cin, password);
 
     errPassword = true;
-    for (const auto &u : allowedUsers) {
-        if (u.first == username && u.second == password) {
+    for (const auto &u : allowedUsers)
+    {
+        if (u.first == username && u.second == password)
+        {
             errPassword = false;
             break;
         }
@@ -106,7 +171,8 @@ void askPassword (std::string username, std::string &password, bool &errPassword
 }
 
 // --- Age Input ---
-void getAge () {
+void getAge()
+{
     int age;
     std::cout << "ENTER YOUR AGE: ";
     std::cin >> age;
@@ -125,7 +191,8 @@ void getAge () {
 }
 
 // --- Vote Menu ---
-void vote () {
+void vote()
+{
     int choice = 0;
     std::vector<std::pair<std::string, std::string>> voteType = {
         {"Iliterate", "I"},
@@ -136,42 +203,44 @@ void vote () {
 
     choicesYM(choice, voteType, "CHOOSE TYPE OF VOTER");
 
-    switch (choice) {
-        case 0:
-            std::cout << R"(
+    switch (choice)
+    {
+    case 0:
+        std::cout << R"(
 ==========================
 | YOU NEED AN ASSISTANT! |
 ==========================
 )";
-            getAge();
-            break;
-        case 1:
-        case 2:
-        case 3:
-            getAge();
-            break;
-        default:
-            std::cout << "INVALID SELECTION!" << std::endl;
-            break;
+        getAge();
+        break;
+    case 1:
+    case 2:
+    case 3:
+        getAge();
+        break;
+    default:
+        std::cout << "INVALID SELECTION!" << std::endl;
+        break;
     }
 }
 
 // --- Main ---
-int main () {
+int main()
+{
     SetConsoleOutputCP(CP_UTF8);
     SetConsoleCP(CP_UTF8);
     std::ios_base::sync_with_stdio(false);
 
     std::vector<std::pair<std::string, std::string>> allowedUsers = {
         {"Admin", "12345"},
-        {"Voter", "12345"}
-    };
+        {"Voter", "12345"}};
 
     std::string username, password;
     bool errorName = false, errorPassword = false;
     int accessAdminSettings = 0;
 
-    while (true) {
+    while (true)
+    {
         system("cls");
 
         if (errorName)
@@ -184,9 +253,11 @@ int main () {
                          "=======================\n\n";
 
         askUsername(username, errorName, allowedUsers);
-        if (errorName) continue;
+        if (errorName)
+            continue;
         askPassword(username, password, errorPassword, allowedUsers);
-        if (errorPassword) continue;
+        if (errorPassword)
+            continue;
 
         break;
     }
@@ -196,22 +267,25 @@ int main () {
 | Now you are logged in! |
 ==========================
 )" << std::endl;
-    std::cout << "WELCOME " << username << std::endl << std::endl;
+    std::cout << "WELCOME " << username << std::endl
+              << std::endl;
 
     std::vector<std::pair<std::string, std::string>> adminChoices = {
         {"Yes", "yes"},
-        {"No", "no"}
-    };
+        {"No", "no"}};
 
     choicesYM(accessAdminSettings, adminChoices, "ACCESS ADMIN SETTINGS?");
 
-    if (accessAdminSettings == 0) {
+    if (accessAdminSettings == 0)
+    {
         std::cout << R"(
 ===========================
 | ADMIN SETTINGS UNLOCKED |
 ===========================
 )" << std::endl;
-    } else {
+    }
+    else
+    {
         std::cout << R"(
 ==========================
 | LIMITED ACCESS GRANTED |
