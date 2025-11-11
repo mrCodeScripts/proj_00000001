@@ -174,7 +174,7 @@ void askPassword(std::string username, std::string &password, bool &errPassword,
 void getAge()
 {
     int age;
-    std::cout << "ENTER YOUR AGE: ";
+    std::cout << "\nENTER YOUR AGE: ";
     std::cin >> age;
     std::cin.ignore(); // prevent leftover newline issues
 
