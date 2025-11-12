@@ -53,6 +53,7 @@ void introduction(float &accumilator, float &dt, float &speed, std::string &fram
     int xTabSize = 5;
     int yTabSize = 1;
     int bxLen = xTabSize * 2 + introPhraseSize;
+
     std::string lTopEdge = u8"╔";
     std::string rTopEdge = u8"╗";
     std::string lBottomEdge = u8"╚";
