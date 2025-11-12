@@ -24,7 +24,6 @@ void makeTopBottomEdgeBorder(int bxLen, std::string &rEdgeChar, std::string &lEd
     }
     frame += '\n';
 }
-
 void makeTextWithColors(std::string &introPhrase, std::vector<std::pair<std::string, std::string>> &colors, int &xTabSize, int &yTabSize, std::string &midVertEdge, std::string &frame)
 {
     int index = 0;
@@ -115,8 +114,7 @@ void introduction(float &accumilator, float &dt, float &speed, std::string &fram
     frame += '\n';
 }
 
-template <typename F>
-void detectKeyboard(int &index, int maxIndex, F callback)
+void detectKeyboard(int &index, int maxIndex, bool &pressEntered)
 {
     if (_kbhit())
     {
@@ -140,7 +138,7 @@ void detectKeyboard(int &index, int maxIndex, F callback)
         }
         else if (k == 13)
         {
-            callback();
+            pressEntered = true;
         }
     }
 }
@@ -179,6 +177,8 @@ void chooseFood(std::vector<std::pair<double, std::string>> &foods, std::vector<
     bool choosingFood = true;
     int index = 0;
     bool initialClear = false;
+    bool hasFinalyChosenFood = false;
+    std::vector<std::pair<int, int>> chosenFood; // foodIndex, foodQuantity
 
     removeCursor();
     while (choosingFood)
@@ -191,6 +191,10 @@ void chooseFood(std::vector<std::pair<double, std::string>> &foods, std::vector<
         {
             hardClear();
             initialClear = true;
+        }
+
+        if (hasFinalyChosenFood) {
+
         }
 
         std::string frame;
@@ -208,9 +212,53 @@ void chooseFood(std::vector<std::pair<double, std::string>> &foods, std::vector<
         }
         std::cout << frame;
 
-        detectKeyboard(index, foods.size() - 1, []() {});
+        detectKeyboard(index, foods.size() - 1, hasFinalyChosenFood);
     }
 }
+
+
+
+void menuSelection (std::vector<std::pair<std::string, std::vector<std::pair<double, std::string>>>> &restaurantMenu, float &accumilator, float &dt, float &speed, std::chrono::high_resolution_clock::time_point &lastFrame, std::vector<std::pair<std::string, std::string>> &colors) {
+    bool initialClear = false;
+    bool choosing = true;
+    bool choosingMenuIndex = true;
+    bool choosingFoodIndex = false;
+    bool hasFinallyChossenMenu = false;
+    int menuIndex = 0;
+    int foodIndex = 0; 
+
+    std::vector<std::pair<int, double>> chosenFoods; // pair(id, price)
+
+    removeCursor();
+
+    while (choosing) {
+        if (initialClear) {
+            properClear();
+        } else {
+            hardClear();
+            initialClear = true;
+        }
+
+        std::string frame;
+        if (choosingMenuIndex && !(choosingFoodIndex) && !(hasFinallyChossenMenu)) {
+            for (int i = 0; i < restaurantMenu.size(); i++) {
+                if (i == menuIndex) {
+                    frame += "> " + restaurantMenu[i].first + '\n';
+                } else {
+                    frame += " " + restaurantMenu[i].first + '\n';
+                }
+            }
+        } else {
+            std::vector<std::pair<double, std::string>> availableFoods;
+            chooseFood(availableFoods, chosenFoods, accumilator, dt, speed, lastFrame, colors);
+        }
+        std::cout << frame;
+
+        detectKeyboard(menuIndex, restaurantMenu.size() - 1, hasFinallyChossenMenu);
+    }
+}
+
+
 
 int main()
 {
@@ -240,9 +288,29 @@ int main()
         {99.99, "Burger King"},
     };
 
-    std::vector<std::pair<int, double>> chosenFoods; // pair(id, price)
+    std::vector<std::pair<std::string, std::vector<std::pair<double, std::string>>>> restaurantMenu = {
+        {"Menu 1", {
+            { 99.99, "Burger King" },
+            { 99.99, "Burger King" },
+            { 99.99, "Burger King" },
+            { 99.99, "Burger King" }
+        }},
+        {"Menu 2", {
+            { 99.99, "Burger King" },
+            { 99.99, "Burger King" },
+            { 99.99, "Burger King" },
+            { 99.99, "Burger King" },
+            { 99.99, "Burger King" }
+        }},
+        {"Menu 3", {
+            { 99.99, "Burger King" },
+            { 99.99, "Burger King" },
+            { 99.99, "Burger King" },
+            { 99.99, "Burger King" }
+        }},
+    };
 
-    chooseFood(foods, chosenFoods, accumilator, dt, speed, lastFrame, colors);
+    menuSelection(restaurantMenu, accumilator, dt, speed, lastFrame, colors);
 
     return 0;
 }
