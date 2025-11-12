@@ -196,7 +196,7 @@ void chooseFood(std::vector<std::pair<double, std::string>> &foods, std::vector<
     }
 }
 
-void menuSelection(std::vector<std::pair<std::string, std::vector<std::pair<double, std::string>>>> &restaurantMenu, std::vector<std::pair<std::string, int>> &chosenFoods, float &accumilator, float &dt, float &speed, std::chrono::high_resolution_clock::time_point &lastFrame, std::vector<std::pair<std::string, std::string>> &colors)
+void menuSelection(std::vector<std::pair<std::string, std::vector<std::pair<double, std::string>>>> &restaurantMenu, std::vector<std::pair<std::string, int>> &selectedFoods, float &accumilator, float &dt, float &speed, std::chrono::high_resolution_clock::time_point &lastFrame, std::vector<std::pair<std::string, std::string>> &colors)
 {
     bool initialClear = false;
     bool choosing = true;
