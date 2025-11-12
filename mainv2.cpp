@@ -10,25 +10,75 @@
 #include <string>
 #include <vector>
 
-void makeTopBottomEdgeBorder (int bxLen, std::string &rEdgeChar, std::string &lEdgeChar, std::string &midEdge, std::string frame) {
-    for (int i = 0; i < bxLen; i++) {
-        if (i == 0) frame += lEdgeChar;
-        else if (i == bxLen) frame += rEdgeChar;
-        else frame += midEdge;
+void makeTopBottomEdgeBorder(int bxLen, std::string &rEdgeChar, std::string &lEdgeChar, std::string &midEdge, std::vector<std::pair<std::string, std::string>> &colors, std::string &frame)
+{
+    frame += '\n';
+    for (int i = 0; i < bxLen; i++)
+    {
+        if (i == 0)
+            frame += colors[0].first + lEdgeChar + colors[0].second;
+        else if (i == (bxLen - 1))
+            frame += colors[0].first + rEdgeChar + colors[0].second;
+        else
+            frame += colors[0].first + midEdge + colors[0].second;
     }
+    frame += '\n';
 }
 
-void makeTextWithColors (std::string &introPhrase, std::vector<std::pair<std::string, std::string>> &colors, std::string &frame) {
+void makeTextWithColors(std::string &introPhrase, std::vector<std::pair<std::string, std::string>> &colors, int &xTabSize, int &yTabSize, std::string &midVertEdge, std::string &frame)
+{
     int index = 0;
+    std::string textFrame;
+    std::string topBottomPadding;
+    std::string leftPadding;
+    std::string rightPadding;
+    if (yTabSize > 0)
+    {
+        int xfullSpace = (xTabSize * 2) + introPhrase.size();
+        for (int j = 1; j <= yTabSize; j++)
+        {
+            // topBottomPadding += '\n';
+            for (int i = 1; i <= xfullSpace; i++)
+            {
+                if (i == 1)
+                    topBottomPadding += colors[0].first + midVertEdge + colors[0].second;
+                else if (i == xfullSpace)
+                    topBottomPadding += colors[0].first + midVertEdge + colors[0].second;
+                else
+                    topBottomPadding += " ";
+            }
+        }
+    }
+    if (xTabSize > 0)
+    {
+        for (int i = 1; i <= xTabSize; i++)
+        {
+            if (i == 1)
+                leftPadding += colors[0].first + midVertEdge + colors[0].second;
+            else
+                leftPadding += ' ';
+        }
+        for (int i = 1; i <= xTabSize; i++)
+        {
+            if (i == xTabSize)
+                rightPadding += colors[0].first + midVertEdge + colors[0].second;
+            else
+                rightPadding += ' ';
+        }
+    }
     for (const char &c : introPhrase)
     {
-        frame += colors[index].first + std::string(1, c) + colors[index].second;
+        textFrame += colors[index].first + std::string(1, c) + colors[index].second;
         index++;
         if (index >= colors.size())
             index = 0;
     }
+    frame += topBottomPadding;
+    frame += '\n' + leftPadding;
+    frame += textFrame;
+    frame += rightPadding + '\n';
+    frame += topBottomPadding;
 }
-
 
 void introduction(float &accumilator, float &dt, float &speed, std::string &frame, std::chrono::high_resolution_clock::time_point &lastFrame, std::vector<std::pair<std::string, std::string>> &colors)
 {
@@ -46,9 +96,7 @@ void introduction(float &accumilator, float &dt, float &speed, std::string &fram
         accumilator -= 1.0f;
     }
 
-    std::string frame2;
     std::string introPhrase = "Welcome to our restaurant";
-
     int introPhraseSize = introPhrase.size();
     int xTabSize = 5;
     int yTabSize = 1;
@@ -61,11 +109,9 @@ void introduction(float &accumilator, float &dt, float &speed, std::string &fram
     std::string midVertEdge = u8"║";
     std::string midHorEdge = u8"═";
 
-    makeTopBottomEdgeBorder(bxLen, rTopEdge, lTopEdge, midHorEdge, frame2);
-    makeTextWithColors(introPhrase, colors, frame2);
-    makeTopBottomEdgeBorder(bxLen, rBottomEdge, lBottomEdge, midHorEdge, frame2);
-
-    frame += frame2;
+    makeTopBottomEdgeBorder(bxLen, rTopEdge, lTopEdge, midHorEdge, colors, frame);
+    makeTextWithColors(introPhrase, colors, xTabSize, yTabSize, midVertEdge, frame);
+    makeTopBottomEdgeBorder(bxLen, rBottomEdge, lBottomEdge, midHorEdge, colors, frame);
     frame += '\n';
 }
 
@@ -153,7 +199,7 @@ void chooseFood(std::vector<std::pair<double, std::string>> &foods, std::vector<
         {
             if (i == index)
             {
-                frame += u8"► $" + std::to_string(foods[i].first) + " " + foods[i].second + '\n';
+                frame += u8"►" + std::string("\033[1;92m") + " $" + std::to_string(foods[i].first) + " " + foods[i].second + "\033[0m" + '\n';
             }
             else
             {
@@ -176,13 +222,13 @@ int main()
     float speed = 0.9f;
     auto lastFrame = std::chrono::high_resolution_clock::now();
     std::vector<std::pair<std::string, std::string>> colors = {
-        {"\033[91m", "\033[0m"}, // Bright Red
-        {"\033[92m", "\033[0m"}, // Bright Green
-        {"\033[93m", "\033[0m"}, // Bright Yellow
-        {"\033[94m", "\033[0m"}, // Bright Blue
-        {"\033[95m", "\033[0m"}, // Bright Magenta
-        {"\033[96m", "\033[0m"}, // Bright Cyan
-        {"\033[97m", "\033[0m"}  // Bright White
+        {"\033[1;91m", "\033[0m"}, // Bright Red
+        {"\033[1;92m", "\033[0m"}, // Bright Green
+        {"\033[1;93m", "\033[0m"}, // Bright Yellow
+        {"\033[1;94m", "\033[0m"}, // Bright Blue
+        {"\033[1;95m", "\033[0m"}, // Bright Magenta
+        {"\033[1;96m", "\033[0m"}, // Bright Cyan
+        {"\033[1;97m", "\033[0m"}  // Bright White
     };
 
     std::vector<std::pair<double, std::string>> foods = {
