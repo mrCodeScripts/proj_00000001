@@ -1,5 +1,6 @@
 #include <iostream>
 #include <windows.h>
+#include <sstream>
 #include <thread>
 #include <chrono>
 #include <algorithm>
@@ -9,6 +10,7 @@
 #include <conio.h>
 #include <string>
 #include <iomanip> // for std::setw
+
 
 void makeTopBottomEdgeBorder(int bxLen, std::string &rEdgeChar, std::string &lEdgeChar, std::string &midEdge, std::vector<std::pair<std::string, std::string>> &colors, std::string &frame)
 {
@@ -25,6 +27,7 @@ void makeTopBottomEdgeBorder(int bxLen, std::string &rEdgeChar, std::string &lEd
     frame += "                                          ";
     frame += '\n';
 }
+
 void makeTextWithColors(std::string &introPhrase, std::vector<std::pair<std::string, std::string>> &colors, int &xTabSize, int &yTabSize, std::string &midVertEdge, std::string &frame)
 {
     int index = 0;
@@ -79,6 +82,93 @@ void makeTextWithColors(std::string &introPhrase, std::vector<std::pair<std::str
     frame += topBottomPadding + "                                                                        " + '\n';
 }
 
+void printReceipt(const std::vector<std::pair<std::string, std::pair<int, double>>> &chosenFoods, double payment)
+{
+    std::ostringstream frame;
+    double total = 0.0;
+
+    struct ItemLine
+    {
+        std::string text;
+    };
+
+    std::vector<ItemLine> lines;
+    lines.reserve(chosenFoods.size() + 3);
+
+    // Compute total and build lines
+    for (const auto &cf : chosenFoods)
+    {
+        double lineTotal = cf.second.first * cf.second.second;
+        total += lineTotal;
+
+        std::ostringstream oss;
+        oss << std::fixed << std::setprecision(2)
+            << cf.first << " x" << cf.second.first
+            << " = $" << lineTotal;
+        lines.push_back({oss.str()});
+    }
+
+    // Totals
+    std::ostringstream totalLine, payLine, changeLine;
+    totalLine << std::fixed << std::setprecision(2) << "Total: $" << total;
+    payLine << std::fixed << std::setprecision(2) << "Payment: $" << payment;
+    changeLine << std::fixed << std::setprecision(2) << "Change: $" << (payment - total);
+
+    lines.push_back({totalLine.str()});
+    lines.push_back({payLine.str()});
+    lines.push_back({changeLine.str()});
+
+    // Find the longest visible line
+    std::size_t maxLen = 0;
+    for (const auto &l : lines)
+        maxLen = std::max(maxLen, l.text.length());
+
+    std::size_t boxWidth = maxLen + 4; // 2 borders + padding
+
+    // Box characters
+    const std::string topLeft = "╔", topRight = "╗";
+    const std::string bottomLeft = "╚", bottomRight = "╝";
+    const std::string vertical = "║";
+    const std::string horizontal = "═";
+    const std::string middleLeft = "╠", middleRight = "╣";
+
+    // Helper to repeat UTF-8
+    auto repeat = [](const std::string &s, std::size_t count)
+    {
+        std::string r;
+        r.reserve(s.size() * count);
+        for (std::size_t i = 0; i < count; ++i)
+            r += s;
+        return r;
+    };
+
+    // Top border
+    frame << topLeft << repeat(horizontal, boxWidth - 2) << topRight << "\n";
+
+    // Header centered
+    std::string header = "RECEIPT";
+    std::size_t padLeft = (boxWidth - 2 - header.size()) / 2;
+    std::size_t padRight = boxWidth - 2 - header.size() - padLeft;
+    frame << vertical << std::string(padLeft, ' ') << header
+          << std::string(padRight, ' ') << vertical << "\n";
+
+    // Separator
+    frame << middleLeft << repeat(horizontal, boxWidth - 2) << middleRight << "\n";
+
+    // Lines aligned
+    for (const auto &l : lines)
+    {
+        std::size_t padding = boxWidth - 2 - l.text.length();
+        frame << vertical << l.text << std::string(padding, ' ') << vertical << "\n";
+    }
+
+    // Bottom border
+    frame << bottomLeft << repeat(horizontal, boxWidth - 2) << bottomRight << "\n";
+
+    // Print UTF-8 safely
+    std::cout << frame.str();
+}
+
 void introduction(float &accumilator, float &dt, float &speed, std::string &frame, std::chrono::high_resolution_clock::time_point &lastFrame, std::string &introPhrase, std::vector<std::pair<std::string, std::string>> &colors)
 {
     auto now = std::chrono::high_resolution_clock::now();
@@ -117,6 +207,24 @@ void properClear()
     COORD coordinate = {0, 0};
     SetConsoleCursorPosition(hout, coordinate);
 }
+
+
+// void properClear() {
+//     HANDLE hStdOut = GetStdHandle(STD_OUTPUT_HANDLE);
+//     CONSOLE_SCREEN_BUFFER_INFO csbi;
+//     DWORD count;
+//     DWORD cellCount;
+//     COORD homeCoords = {0, 0};
+
+//     if (hStdOut == INVALID_HANDLE_VALUE) return;
+
+//     if (!GetConsoleScreenBufferInfo(hStdOut, &csbi)) return;
+//     cellCount = csbi.dwSize.X * csbi.dwSize.Y;
+
+//     FillConsoleOutputCharacter(hStdOut, (TCHAR)' ', cellCount, homeCoords, &count);
+//     FillConsoleOutputAttribute(hStdOut, csbi.wAttributes, cellCount, homeCoords, &count);
+//     SetConsoleCursorPosition(hStdOut, homeCoords);
+// }
 
 void removeCursor()
 {
@@ -166,6 +274,10 @@ void detectKeyboard(int &index, int maxIndex, bool &pressEntered, bool &pressedE
         {
             pressedEsc = true;
         }
+        else if (k == 112 || k == 80)
+        {
+            pressedPayment = true;
+        }
         else if (k == 99 || k == 67)
         {
             pressedCancel = true;
@@ -173,7 +285,6 @@ void detectKeyboard(int &index, int maxIndex, bool &pressEntered, bool &pressedE
     }
 }
 
-// Function to show menu and handle ESC navigation, selection, cancellation, and payment
 void chooseFood(
     int menuIndex,
     std::vector<std::pair<double, std::string>> &foods,
@@ -207,6 +318,7 @@ void chooseFood(
         introduction(accumilator, dt, speed, frame, lastFrame, introPhrase, colors);
         for (int i = 0; i < foods.size(); i++)
         {
+            std::ostringstream ss;
             bool selected = false;
             for (auto &cf : chosenFoods)
             {
@@ -214,17 +326,21 @@ void chooseFood(
                     selected = true;
             }
 
+            ss << std::fixed << std::setprecision(2) << foods[i].first;
+            std::string formatedString = ss.str();
             if (i == index)
-                frame += u8" ► \033[1;92m$" + std::to_string(foods[i].first) + " " + foods[i].second + "                       " + "\033[0m";
+            {
+                frame += u8" ► \033[1;92m$" + formatedString + " " + foods[i].second + "                       " + "\033[0m";
+            }
             else
-                frame += u8"   $" + std::to_string(foods[i].first) + " " + foods[i].second + "                       ";
-
+            {
+                frame += u8"   $" + formatedString + " " + foods[i].second + "                       ";
+            }
             if (selected)
                 frame += " [selected]";
             frame += '\n';
         }
 
-        // Show current total
         double total = 0;
         frame += "\nCurrent selections:\n";
         for (auto &cf : chosenFoods)
@@ -246,7 +362,7 @@ void chooseFood(
                                    { return cf.first == foods[index].second; });
             if (it != chosenFoods.end())
             {
-                it->second.first++; // increase quantity
+                (*it).second.first++;
             }
             else
             {
@@ -276,18 +392,20 @@ void chooseFood(
 
         if (pressedPayment)
         {
-            properClear();
-            std::cout << "----- RECEIPT -----\n";
-            double total = 0;
-            for (auto &cf : chosenFoods)
-            {
-                std::cout << cf.first << " x" << cf.second.first << " = $" << cf.second.first * cf.second.second << '\n';
-                total += cf.second.first * cf.second.second;
-            }
-            std::cout << "Total: $" << total << "\n";
-            std::cout << "Thank you for your order!\n";
-            chosenFoods.clear();
-            system("pause");
+            // while (true)
+            // {
+            // }
+            // properClear();
+            // std::cout << "----- RECEIPT -----\n";
+            // double total = 0;
+            // for (auto &cf : chosenFoods)
+            // {
+            //     std::cout << cf.first << " x" << cf.second.first << " = $" << cf.second.first * cf.second.second << '\n';
+            //     total += cf.second.first * cf.second.second;
+            // }
+            // std::cout << "Total: $" << total << "\n";
+            // std::cout << "Thank you for your order!\n";
+            // chosenFoods.clear();
         }
     }
 }
@@ -321,31 +439,37 @@ void menuSelection(
             initialClear = true;
         }
         std::string frame;
-        std::string introPhrase = "Welcome to our restaurant (ENTER to open, ESC to exit)";
+        std::string introPhrase = "Welcome to our restaurant (ENTER to open, P to payment, ESC to exit)";
         introduction(accumilator, dt, speed, frame, lastFrame, introPhrase, colors);
         for (int i = 0; i < restaurantMenu.size(); i++)
         {
             if (i == menuIndex)
             {
-                frame += u8" ► " + std::string("\033[1;92m") + restaurantMenu[i].first + "\033[0m" + "                       " + '\n';
+                frame += u8" ► " + std::string("\033[1;92m") + restaurantMenu[i].first + "\033[0m" + "                                                                         " + '\n';
             }
             else
             {
-                frame += "   " + restaurantMenu[i].first + "                       " + '\n';
+                frame += "   " + restaurantMenu[i].first + "                                                                                   " + '\n';
             }
         }
 
         double total = 0;
         if (!chosenFoods.empty())
         {
-            frame += "\nCurrent selections across menus:\n";
+            frame += "\n\n\n\nCurrent selections across menus:                                 \n";
+            int ind = 1;
             for (auto &cf : chosenFoods)
             {
-                frame += "  " + cf.first + " x" + std::to_string(cf.second.first) + " = $" + std::to_string(cf.second.first * cf.second.second) + '\n';
+                std::ostringstream oss;
+                double iprice = cf.second.first * cf.second.second;
+                oss << std::fixed << std::setprecision(2) << iprice;
+                std::string formattedShit = oss.str();
+                frame += " [" + std::to_string(ind) + "] " + cf.first + " x" + std::to_string(cf.second.first) + " = $" + formattedShit + '\n';
                 total += cf.second.first * cf.second.second;
+                ind++;
             }
-            frame += "Total: $" + std::to_string(total) + "\n";
-            frame += "Press P to pay\n";
+            frame += "\n\nTotal: $" + std::to_string(total) + "                         "  + "\n";
+            frame += "Press P to pay                              \n";
         }
 
         std::cout << frame;
@@ -355,8 +479,9 @@ void menuSelection(
         if (pressEnter)
         {
             pressEnter = false;
-            std::string foodIntroPhrase = "Select your food (ENTER to add, ESC to go back, P to pay, C to cancel current menu)";
+            std::string foodIntroPhrase = "Select your food (ENTER to add, ESC to go back, C to cancel current menu)";
             chooseFood(menuIndex, restaurantMenu[menuIndex].second, chosenFoods, accumilator, dt, speed, lastFrame, foodIntroPhrase, colors);
+            initialClear = false;
         }
 
         if (pressedEsc)
@@ -367,18 +492,72 @@ void menuSelection(
 
         if (pressedPayment)
         {
-            properClear();
-            std::cout << "----- RECEIPT -----\n";
-            double total = 0;
-            for (auto &cf : chosenFoods)
+            bool donePaying = false;
+            bool initialCls = false;
+            bool paymentNotEnough = false;
+            double payment;
+            double change;
+            while (true)
             {
-                std::cout << cf.first << " x" << cf.second.first << " = $" << cf.second.first * cf.second.second << '\n';
-                total += cf.second.first * cf.second.second;
+                if (initialCls)
+                {
+                    properClear();
+                }
+                else
+                {
+                    hardClear();
+                    initialCls = true;
+                }
+                if (paymentNotEnough)
+                {
+                    hardClear();
+                    std::cout << "\033[31m" << u8R"(
+╔═══════════════════════════════════════╗
+║           Payment Not Enough          ║
+╚═══════════════════════════════════════╝
+                    )" << "\033[0m"
+                              << "\n"
+                              << std::endl;
+                    std::cout << std::endl;
+                }
+                double total = 0;
+                int chosenFoodsIndex = 1;
+                for (auto &cf : chosenFoods)
+                {
+                    std::cout << std::to_string(chosenFoodsIndex) << ". " << cf.first << " x" << cf.second.first << " = $" << cf.second.first * cf.second.second << '\n';
+                    total += cf.second.first * cf.second.second;
+                    chosenFoodsIndex++;
+                }
+                std::cout << "\n\n\nTotal: $" << total << "                       " << "\n";
+                std::cout << "Payment: $";
+                std::cin >> payment;
+                if (total > payment)
+                {
+                    paymentNotEnough = true;
+                }
+                else
+                {
+                    change = payment - total;
+                    donePaying = true;
+                }
+                std::cout << "Change: $" << std::fixed << std::setprecision(2) << change << "\n\n\n"
+                          << std::endl;
+
+                printReceipt(chosenFoods, payment);
+
+                if (donePaying)
+                    break;
             }
-            std::cout << "Total: $" << total << "\n";
-            std::cout << "Thank you for your order!\n";
             chosenFoods.clear();
-            system("pause");
+            std::cout << "\033[92m" << u8R"(
+╔══════════════════════════════════════════╗
+║           THANK YOU FOR BUYING!          ║
+╚══════════════════════════════════════════╝
+                    )" << "\033[0m"
+                      << "\n"
+                      << std::endl;
+            std::cout << std::endl;
+            choosing = false;
         }
     }
 }
@@ -396,10 +575,27 @@ int main()
         {"\033[1;91m", "\033[0m"}, {"\033[1;92m", "\033[0m"}, {"\033[1;93m", "\033[0m"}, {"\033[1;94m", "\033[0m"}, {"\033[1;95m", "\033[0m"}, {"\033[1;96m", "\033[0m"}, {"\033[1;97m", "\033[0m"}};
 
     std::vector<std::pair<std::string, std::vector<std::pair<double, std::string>>>> restaurantMenu = {
-        {"Menu 1", {{99.99, "Burger"}, {129.50, "Cheese Burger"}, {149.75, "Bacon Burger"}}},
-        {"Menu 2", {{199.99, "Pepperoni Pizza"}, {249.99, "Four Cheese"}, {229.99, "Hawaiian"}}},
-        {"Menu 3", {{49.99, "Iced Tea"}, {59.99, "Coke"}, {39.99, "Water"}}},
-    };
+        {"🍔 Food Menu",
+         {{2.99, "🍟 Fries"},
+          {4.99, "🍔 Burger"},
+          {5.49, "🧀 Cheese Burger"},
+          {5.99, "🥓 Bacon Burger"},
+          {3.99, "🌭 Hotdog"},
+          {6.49, "🍕 Pizza Slice"}}},
+        {"🍰 Dessert Menu",
+         {{1.49, "🍪 Cookies"},
+          {2.29, "🧁 Cupcake"},
+          {1.99, "🍩 Donut"},
+          {2.99, "🍦 Ice Cream"},
+          {3.49, "🍰 Cheesecake"},
+          {3.99, "🥧 Apple Pie"}}},
+        {"🥤 Drinks Menu",
+         {{0.99, "🥤 Soda"},
+          {1.49, "🧃 Juice"},
+          {1.99, "☕ Coffee"},
+          {2.49, "🧋 Milk Tea"},
+          {3.99, "🍺 Beer"},
+          {4.49, "🍷 Wine"}}}};
 
     menuSelection(restaurantMenu, accumilator, dt, speed, lastFrame, colors);
     return 0;
