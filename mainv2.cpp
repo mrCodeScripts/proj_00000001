@@ -82,20 +82,34 @@ void makeTextWithColors(std::string &introPhrase, std::vector<std::pair<std::str
     frame += topBottomPadding + "                                                                        " + '\n';
 }
 
+std::size_t displayWidth(const std::string &s)
+{
+    std::size_t width = 0;
+    for (std::size_t i = 0; i < s.size();)
+    {
+        unsigned char c = s[i];
+        if ((c & 0x80) == 0)
+        {
+            // ASCII
+            i += 1;
+            width += 1;
+        }
+        else if ((c & 0xE0) == 0xC0) { i += 2; width += 1; } // 2-byte UTF-8
+        else if ((c & 0xF0) == 0xE0) { i += 3; width += 1; } // 3-byte UTF-8
+        else if ((c & 0xF8) == 0xF0) { i += 4; width += 2; } // 4-byte (emoji) ~double width
+        else i += 1;
+    }
+    return width;
+}
+
 void printReceipt(const std::vector<std::pair<std::string, std::pair<int, double>>> &chosenFoods, double payment)
 {
     std::ostringstream frame;
     double total = 0.0;
 
-    struct ItemLine
-    {
-        std::string text;
-    };
-
+    struct ItemLine { std::string text; };
     std::vector<ItemLine> lines;
-    lines.reserve(chosenFoods.size() + 3);
 
-    // Compute total and build lines
     for (const auto &cf : chosenFoods)
     {
         double lineTotal = cf.second.first * cf.second.second;
@@ -109,40 +123,27 @@ void printReceipt(const std::vector<std::pair<std::string, std::pair<int, double
     }
 
     // Totals
-    std::ostringstream totalLine, payLine, changeLine;
-    totalLine << std::fixed << std::setprecision(2) << "Total: $" << total;
-    payLine << std::fixed << std::setprecision(2) << "Payment: $" << payment;
-    changeLine << std::fixed << std::setprecision(2) << "Change: $" << (payment - total);
+    lines.push_back({ "Total: $" + std::to_string(total) });
+    lines.push_back({ "Payment: $" + std::to_string(payment) });
+    lines.push_back({ "Change: $" + std::to_string(payment - total) });
 
-    lines.push_back({totalLine.str()});
-    lines.push_back({payLine.str()});
-    lines.push_back({changeLine.str()});
-
-    // Find the longest visible line
+    // Find max display width
     std::size_t maxLen = 0;
     for (const auto &l : lines)
-        maxLen = std::max(maxLen, l.text.length());
+        maxLen = std::max(maxLen, displayWidth(l.text));
 
-    std::size_t boxWidth = maxLen + 4; // 2 borders + padding
+    std::size_t boxWidth = maxLen + 4;
 
-    // Box characters
     const std::string topLeft = "╔", topRight = "╗";
     const std::string bottomLeft = "╚", bottomRight = "╝";
     const std::string vertical = "║";
     const std::string horizontal = "═";
     const std::string middleLeft = "╠", middleRight = "╣";
 
-    // Helper to repeat UTF-8
-    auto repeat = [](const std::string &s, std::size_t count)
-    {
-        std::string r;
-        r.reserve(s.size() * count);
-        for (std::size_t i = 0; i < count; ++i)
-            r += s;
-        return r;
+    auto repeat = [](const std::string &s, std::size_t count) {
+        std::string r; r.reserve(s.size() * count); for (std::size_t i = 0; i < count; ++i) r += s; return r;
     };
 
-    // Top border
     frame << topLeft << repeat(horizontal, boxWidth - 2) << topRight << "\n";
 
     // Header centered
@@ -152,20 +153,17 @@ void printReceipt(const std::vector<std::pair<std::string, std::pair<int, double
     frame << vertical << std::string(padLeft, ' ') << header
           << std::string(padRight, ' ') << vertical << "\n";
 
-    // Separator
     frame << middleLeft << repeat(horizontal, boxWidth - 2) << middleRight << "\n";
 
-    // Lines aligned
+    // Lines aligned using displayWidth
     for (const auto &l : lines)
     {
-        std::size_t padding = boxWidth - 2 - l.text.length();
+        std::size_t padding = boxWidth - 2 - displayWidth(l.text);
         frame << vertical << l.text << std::string(padding, ' ') << vertical << "\n";
     }
 
-    // Bottom border
     frame << bottomLeft << repeat(horizontal, boxWidth - 2) << bottomRight << "\n";
 
-    // Print UTF-8 safely
     std::cout << frame.str();
 }
 
@@ -343,12 +341,17 @@ void chooseFood(
 
         double total = 0;
         frame += "\nCurrent selections:\n";
+        int indFood = 1;
         for (auto &cf : chosenFoods)
         {
-            frame += "  " + cf.first + " x" + std::to_string(cf.second.first) + " = $" + std::to_string(cf.second.second * cf.second.first) + '\n';
+            frame += " [" + std::to_string(indFood) + "] " + cf.first + " x" + std::to_string(cf.second.first) + " = $" + std::to_string(cf.second.second * cf.second.first) + '\n';
             total += cf.second.first * cf.second.second;
+            indFood++;
         }
-        frame += "Total: $" + std::to_string(total) + "                                " + "\n";
+        std::ostringstream sis;
+        sis << std::fixed << std::setprecision(2) << total;
+        std::string tot = sis.str();
+        frame += "Total: $" + tot + "                                " + "\n";
         frame += "                          ";
 
         std::cout << frame;
@@ -468,7 +471,10 @@ void menuSelection(
                 total += cf.second.first * cf.second.second;
                 ind++;
             }
-            frame += "\n\nTotal: $" + std::to_string(total) + "                         "  + "\n";
+            std::ostringstream sis;
+            sis << std::fixed << std::setprecision(2) << total;
+            std::string tot = sis.str();
+            frame += "\n\nTotal: $" + tot + "                         "  + "\n";
             frame += "Press P to pay                              \n";
         }
 
