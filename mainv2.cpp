@@ -12,7 +12,7 @@
 
 void makeTopBottomEdgeBorder(int bxLen, std::string &rEdgeChar, std::string &lEdgeChar, std::string &midEdge, std::vector<std::pair<std::string, std::string>> &colors, std::string &frame)
 {
-    frame += '\n';
+    // frame += '\n';
     for (int i = 0; i < bxLen; i++)
     {
         if (i == 0)
@@ -22,6 +22,7 @@ void makeTopBottomEdgeBorder(int bxLen, std::string &rEdgeChar, std::string &lEd
         else
             frame += colors[0].first + midEdge + colors[0].second;
     }
+    frame += "                                          ";
     frame += '\n';
 }
 void makeTextWithColors(std::string &introPhrase, std::vector<std::pair<std::string, std::string>> &colors, int &xTabSize, int &yTabSize, std::string &midVertEdge, std::string &frame)
@@ -71,11 +72,11 @@ void makeTextWithColors(std::string &introPhrase, std::vector<std::pair<std::str
         if (index >= colors.size())
             index = 0;
     }
-    frame += topBottomPadding;
+    frame += topBottomPadding + "                                                                        ";
     frame += '\n' + leftPadding;
     frame += textFrame;
-    frame += rightPadding + '\n';
-    frame += topBottomPadding;
+    frame += rightPadding + "                                                                        " + '\n';
+    frame += topBottomPadding + "                                                                        " + '\n';
 }
 
 void introduction(float &accumilator, float &dt, float &speed, std::string &frame, std::chrono::high_resolution_clock::time_point &lastFrame, std::string &introPhrase, std::vector<std::pair<std::string, std::string>> &colors)
@@ -135,7 +136,7 @@ void hardClear()
 #endif
 }
 
-void detectKeyboard(int &index, int maxIndex, bool &pressEntered, bool &pressedEsc)
+void detectKeyboard(int &index, int maxIndex, bool &pressEntered, bool &pressedEsc, bool &pressedPayment, bool &pressedCancel)
 {
     if (_kbhit())
     {
@@ -165,6 +166,10 @@ void detectKeyboard(int &index, int maxIndex, bool &pressEntered, bool &pressedE
         {
             pressedEsc = true;
         }
+        else if (k == 99 || k == 67)
+        {
+            pressedCancel = true;
+        }
     }
 }
 
@@ -183,13 +188,18 @@ void chooseFood(
     int index = 0;
     bool pressEnter = false;
     bool pressedEsc = false;
+    bool pressedPayment = false;
+    bool pressedCancelPayment = false;
     bool initialClear = false;
 
     while (choosing)
     {
-        if (initialClear) {
+        if (initialClear)
+        {
             properClear();
-        } else {
+        }
+        else
+        {
             hardClear();
             initialClear = true;
         }
@@ -205,10 +215,10 @@ void chooseFood(
             }
 
             if (i == index)
-                frame += " ► ";
+                frame += u8" ► \033[1;92m$" + std::to_string(foods[i].first) + " " + foods[i].second + "                       " + "\033[0m";
             else
-                frame += "    ";
-            frame += "$" + std::to_string(foods[i].first) + " " + foods[i].second;
+                frame += u8"   $" + std::to_string(foods[i].first) + " " + foods[i].second + "                       ";
+
             if (selected)
                 frame += " [selected]";
             frame += '\n';
@@ -222,14 +232,13 @@ void chooseFood(
             frame += "  " + cf.first + " x" + std::to_string(cf.second.first) + " = $" + std::to_string(cf.second.second * cf.second.first) + '\n';
             total += cf.second.first * cf.second.second;
         }
-        frame += "Total: $" + std::to_string(total) + "\n";
+        frame += "Total: $" + std::to_string(total) + "                                " + "\n";
+        frame += "                          ";
 
         std::cout << frame;
 
-        // Handle keyboard input
-        detectKeyboard(index, foods.size() - 1, pressEnter, pressedEsc);
+        detectKeyboard(index, foods.size() - 1, pressEnter, pressedEsc, pressedPayment, pressedCancelPayment);
 
-        // Add food
         if (pressEnter)
         {
             pressEnter = false;
@@ -245,47 +254,40 @@ void chooseFood(
             }
         }
 
-        // ESC: go back
         if (pressedEsc)
         {
             pressedEsc = false;
             break; // exit food menu to main menu
         }
 
-        // Cancel current menu
-        if (_kbhit())
+        if (pressedCancelPayment)
         {
-            int k = _getch();
-            if (k == 'c' || k == 'C')
+            for (auto it = chosenFoods.begin(); it != chosenFoods.end();)
             {
-                // Remove all items of this menu
-                for (auto it = chosenFoods.begin(); it != chosenFoods.end();)
+                if (std::find_if(foods.begin(), foods.end(), [&](auto &f)
+                                 { return f.second == it->first; }) != foods.end())
                 {
-                    if (std::find_if(foods.begin(), foods.end(), [&](auto &f)
-                                     { return f.second == it->first; }) != foods.end())
-                    {
-                        it = chosenFoods.erase(it);
-                    }
-                    else
-                        ++it;
+                    it = chosenFoods.erase(it);
                 }
+                else
+                    ++it;
             }
-            if (k == 'p' || k == 'P')
+        }
+
+        if (pressedPayment)
+        {
+            properClear();
+            std::cout << "----- RECEIPT -----\n";
+            double total = 0;
+            for (auto &cf : chosenFoods)
             {
-                // Pay: generate receipt
-                properClear();
-                std::cout << "----- RECEIPT -----\n";
-                double total = 0;
-                for (auto &cf : chosenFoods)
-                {
-                    std::cout << cf.first << " x" << cf.second.first << " = $" << cf.second.first * cf.second.second << '\n';
-                    total += cf.second.first * cf.second.second;
-                }
-                std::cout << "Total: $" << total << "\n";
-                std::cout << "Thank you for your order!\n";
-                chosenFoods.clear();
-                system("pause");
+                std::cout << cf.first << " x" << cf.second.first << " = $" << cf.second.first * cf.second.second << '\n';
+                total += cf.second.first * cf.second.second;
             }
+            std::cout << "Total: $" << total << "\n";
+            std::cout << "Thank you for your order!\n";
+            chosenFoods.clear();
+            system("pause");
         }
     }
 }
@@ -301,9 +303,11 @@ void menuSelection(
     int menuIndex = 0;
     bool pressEnter = false;
     bool pressedEsc = false;
+    bool pressedPayment = false;
+    bool pressedCancelPayment = false;
     bool initialClear = false;
 
-    std::vector<std::pair<std::string, std::pair<int, double>>> chosenFoods;
+    std::vector<std::pair<std::string, std::pair<int, double>>> chosenFoods; // food name, {quantity, price}
 
     while (choosing)
     {
@@ -319,23 +323,15 @@ void menuSelection(
         std::string frame;
         std::string introPhrase = "Welcome to our restaurant (ENTER to open, ESC to exit)";
         introduction(accumilator, dt, speed, frame, lastFrame, introPhrase, colors);
-        // for (int i = 0; i < restaurantMenu.size(); i++)
-        // {
-        //     if (i == menuIndex)
-        //         frame += u8"► \033[1;92m" + restaurantMenu[i].first + "\033[0m \n";
-        //     else
-        //         frame += " " + restaurantMenu[i].first + '\n' + "         ";
-        // }
-
         for (int i = 0; i < restaurantMenu.size(); i++)
         {
             if (i == menuIndex)
             {
-                frame += u8" ► " + std::string("\033[1;92m") + restaurantMenu[i].first + "\033[0m" + "       " + '\n';
+                frame += u8" ► " + std::string("\033[1;92m") + restaurantMenu[i].first + "\033[0m" + "                       " + '\n';
             }
             else
             {
-                frame += "   " + restaurantMenu[i].first + "       " + '\n';
+                frame += "   " + restaurantMenu[i].first + "                       " + '\n';
             }
         }
 
@@ -354,7 +350,7 @@ void menuSelection(
 
         std::cout << frame;
 
-        detectKeyboard(menuIndex, restaurantMenu.size() - 1, pressEnter, pressedEsc);
+        detectKeyboard(menuIndex, restaurantMenu.size() - 1, pressEnter, pressedEsc, pressedPayment, pressedCancelPayment);
 
         if (pressEnter)
         {
@@ -369,24 +365,20 @@ void menuSelection(
             break;
         }
 
-        if (_kbhit())
+        if (pressedPayment)
         {
-            int k = _getch();
-            if (k == 'p' || k == 'P')
+            properClear();
+            std::cout << "----- RECEIPT -----\n";
+            double total = 0;
+            for (auto &cf : chosenFoods)
             {
-                properClear();
-                std::cout << "----- RECEIPT -----\n";
-                double total = 0;
-                for (auto &cf : chosenFoods)
-                {
-                    std::cout << cf.first << " x" << cf.second.first << " = $" << cf.second.first * cf.second.second << '\n';
-                    total += cf.second.first * cf.second.second;
-                }
-                std::cout << "Total: $" << total << "\n";
-                std::cout << "Thank you for your order!\n";
-                chosenFoods.clear();
-                system("pause");
+                std::cout << cf.first << " x" << cf.second.first << " = $" << cf.second.first * cf.second.second << '\n';
+                total += cf.second.first * cf.second.second;
             }
+            std::cout << "Total: $" << total << "\n";
+            std::cout << "Thank you for your order!\n";
+            chosenFoods.clear();
+            system("pause");
         }
     }
 }
@@ -410,6 +402,5 @@ int main()
     };
 
     menuSelection(restaurantMenu, accumilator, dt, speed, lastFrame, colors);
-
     return 0;
 }
