@@ -187,21 +187,23 @@ void printReceipt(const std::vector<std::pair<std::string, std::pair<int, double
     std::cout << frame.str();
 }
 
-void introduction(float &accumilator, float &dt, float &speed, std::string &frame, std::chrono::high_resolution_clock::time_point &lastFrame, std::string &introPhrase, std::vector<std::pair<std::string, std::string>> &colors)
+void introduction(float &accumilator, float &dt, float &speed, std::string &frame,
+                  std::chrono::high_resolution_clock::time_point &lastFrame,
+                  std::string &introPhrase, std::vector<std::pair<std::string, std::string>> &colors)
 {
+    static std::mt19937 gen(std::random_device{}()); // static RNG
     auto now = std::chrono::high_resolution_clock::now();
     std::chrono::duration<float> elapsed = now - lastFrame;
     dt = elapsed.count();
     accumilator += speed * dt;
     lastFrame = now;
+
     if (accumilator >= 0.3f)
     {
-        std::random_device rd;
-        std::mt19937 gen(rd());
         std::shuffle(colors.begin(), colors.end(), gen);
-        accumilator -= 1.0f;
+        accumilator = 0.0f; // reset after animation step
     }
-    // std::string introPhrase = "";
+
     int introPhraseSize = introPhrase.size();
     int xTabSize = 5;
     int yTabSize = 1;
@@ -212,6 +214,7 @@ void introduction(float &accumilator, float &dt, float &speed, std::string &fram
     std::string rBottomEdge = u8"╝";
     std::string midVertEdge = u8"║";
     std::string midHorEdge = u8"═";
+
     makeTopBottomEdgeBorder(bxLen, rTopEdge, lTopEdge, midHorEdge, colors, frame);
     makeTextWithColors(introPhrase, colors, xTabSize, yTabSize, midVertEdge, frame);
     makeTopBottomEdgeBorder(bxLen, rBottomEdge, lBottomEdge, midHorEdge, colors, frame);
@@ -340,7 +343,9 @@ void paymentProcess(std::vector<std::pair<std::string, std::pair<int, double>>> 
             total += cf.second.first * cf.second.second;
             chosenFoodsIndex++;
         }
-        std::cout << "\n\n\nTotal: $" << total << "                       " << "\n";
+            std::cout << u8"\n═════════════════════════════════                          ";
+            std::cout << "\033[1;32m \nTotal: $" << total << "                                ";
+            std::cout << u8"\033[0m\n═════════════════════════════════                           \n";
         std::cout << "Payment: $";
         std::cin >> payment;
         if (total > payment)
@@ -439,10 +444,16 @@ void chooseFood(
             total += cf.second.first * cf.second.second;
             indFood++;
         }
+        frame += "\n                                 ";
+        frame += "\n                                 ";
+        frame += "\n                                 ";
+        frame += "\n                                 ";
         std::ostringstream sis;
         sis << std::fixed << std::setprecision(2) << total;
         std::string tot = sis.str();
-        frame += "Total: $" + tot + "                                " + "\n";
+        frame += u8"\n═════════════════════════════════                          ";
+        frame += "\033[1;32m \nTotal: $" + tot + "                                ";
+        frame += u8"\033[0m\n═════════════════════════════════                           \n";
         frame += "                          ";
 
         std::cout << frame;
@@ -490,7 +501,9 @@ void menuSelection(
     std::vector<std::pair<std::string, std::vector<std::pair<double, std::string>>>> &restaurantMenu,
     float &accumilator, float &dt, float &speed,
     std::chrono::high_resolution_clock::time_point &lastFrame,
-    std::vector<std::pair<std::string, std::string>> &colors)
+    std::vector<std::pair<std::string, std::string>> &colors,
+    std::vector<std::pair<std::string, std::string>> &paymentColors,
+    float &payAccumilator, float &paydt, float &payspeed)
 {
     removeCursor();
     bool choosing = true;
@@ -500,9 +513,7 @@ void menuSelection(
     bool pressedPayment = false;
     bool pressedCancelPayment = false;
     bool initialClear = false;
-
     std::vector<std::pair<std::string, std::pair<int, double>>> chosenFoods; // food name, {quantity, price}
-
     while (choosing)
     {
         if (initialClear)
@@ -547,8 +558,20 @@ void menuSelection(
             std::ostringstream sis;
             sis << std::fixed << std::setprecision(2) << total;
             std::string tot = sis.str();
-            frame += "\n\nTotal: $" + tot + "                         " + "\n";
-            frame += "Press P to pay                              \n";
+            // frame += "\n\nTotal: $" + tot + "                         " + "\n";
+            frame += u8"\n═════════════════════════════════                          ";
+            frame += "\033[1;32m \nTotal: $" + tot + "                                ";
+            frame += u8"\033[0m\n═════════════════════════════════                           \n";
+            //             frame += u8R"(
+            //             \033[32m
+            // ╔═══════════════════════════════════════╗
+            // ║           Payment Not Enough          ║
+            // ╚═══════════════════════════════════════╝
+            //             )";
+
+            // frame += "\nPress P to pay                              ";
+            std::string paymentPhrase = "PRESS 'P' FOR PAYMENT :)";
+            introduction(payAccumilator, paydt, payspeed, frame, lastFrame, paymentPhrase, paymentColors);
         }
 
         std::cout << frame;
@@ -584,9 +607,21 @@ int main()
     float accumilator = 0;
     float dt = 0;
     float speed = 0.9f;
+    float payAccumilator = 0;
+    float paydt = 0;
+    float paySpeed = 3.9f;
     auto lastFrame = std::chrono::high_resolution_clock::now();
     std::vector<std::pair<std::string, std::string>> colors = {
         {"\033[1;91m", "\033[0m"}, {"\033[1;92m", "\033[0m"}, {"\033[1;93m", "\033[0m"}, {"\033[1;94m", "\033[0m"}, {"\033[1;95m", "\033[0m"}, {"\033[1;96m", "\033[0m"}, {"\033[1;97m", "\033[0m"}};
+    std::vector<std::pair<std::string, std::string>> paymentColors = {
+        {"\033[1;91m", "\033[0m"}, 
+        {"\033[1;95m", "\033[0m"}, 
+        {"\033[1;94m", "\033[0m"}, 
+        {"\033[1;96m", "\033[0m"},
+        {"\033[1;92m", "\033[0m"},
+        {"\033[1;93m", "\033[0m"}, 
+        {"\033[1;97m", "\033[0m"} 
+    };
 
     std::vector<std::pair<std::string, std::vector<std::pair<double, std::string>>>> restaurantMenu = {
         {"🍔 Food Menu",
@@ -611,6 +646,6 @@ int main()
           {3.99, "🍺 Beer"},
           {4.49, "🍷 Wine"}}}};
 
-    menuSelection(restaurantMenu, accumilator, dt, speed, lastFrame, colors);
+    menuSelection(restaurantMenu, accumilator, dt, speed, lastFrame, colors, paymentColors, payAccumilator, paydt, paySpeed);
     return 0;
 }
