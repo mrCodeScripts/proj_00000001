@@ -378,6 +378,138 @@ void paymentProcess(std::vector<std::pair<std::string, std::pair<int, double>>> 
     choosing = false;
 }
 
+// void chooseFood(
+//     int menuIndex,
+//     std::vector<std::pair<double, std::string>> &foods,
+//     std::vector<std::pair<std::string, std::pair<int, double>>> &chosenFoods,
+//     float &accumilator, float &dt, float &speed,
+//     std::chrono::high_resolution_clock::time_point &lastFrame,
+//     std::string introPhrase,
+//     bool choosing1,
+//     std::vector<std::pair<std::string, std::string>> &colors,
+//     int maxQuantity = 5) // <-- set default max quantity per food
+// {
+//     removeCursor();
+//     bool choosing2 = true;
+//     int index = 0;
+//     bool pressEnter = false;
+//     bool pressedEsc = false;
+//     bool pressedPayment = false;
+//     bool pressedCancelPayment = false;
+//     bool initialClear = false;
+
+//     while (choosing2)
+//     {
+//         if (initialClear)
+//             properClear();
+//         else
+//             hardClear(), initialClear = true;
+
+//         std::string frame;
+//         introduction(accumilator, dt, speed, frame, lastFrame, introPhrase, colors);
+
+//         for (int i = 0; i < foods.size(); i++)
+//         {
+//             std::ostringstream ss;
+//             bool selected = false;
+//             int quantity = 0;
+
+//             for (auto &cf : chosenFoods)
+//             {
+//                 if (cf.first == foods[i].second)
+//                 {
+//                     selected = true;
+//                     quantity = cf.second.first;
+//                 }
+//             }
+
+//             ss << std::fixed << std::setprecision(2) << foods[i].first;
+//             std::string formattedString = ss.str();
+
+//             if (i == index)
+//                 frame += u8" ► \033[1;92m$" + formattedString + " " + foods[i].second + "                       " + "\033[0m";
+//             else
+//                 frame += u8"   $" + formattedString + " " + foods[i].second + "                       ";
+
+//             if (selected)
+//                 frame += " [selected x" + std::to_string(quantity) + "]";
+//             frame += '\n';
+//         }
+
+//         double total = 0;
+//         frame += "\nCurrent selections:\n";
+//         int indFood = 1;
+//         for (auto &cf : chosenFoods)
+//         {
+//             frame += " [" + std::to_string(indFood) + "] " + cf.first + " x" + std::to_string(cf.second.first) +
+//                      " = $" + std::to_string(cf.second.second * cf.second.first) + '\n';
+//             total += cf.second.first * cf.second.second;
+//             indFood++;
+//         }
+
+//         std::ostringstream sis;
+//         sis << std::fixed << std::setprecision(2) << total;
+//         std::string tot = sis.str();
+//         frame += u8"\n═════════════════════════════════                          ";
+//         frame += "\033[1;32m \nTotal: $" + tot + "                                ";
+//         frame += u8"\033[0m\n═════════════════════════════════                           \n";
+
+//         std::cout << frame;
+
+//         detectKeyboard(index, foods.size() - 1, pressEnter, pressedEsc, pressedPayment, pressedCancelPayment);
+
+//         if (pressEnter)
+//         {
+//             pressEnter = false;
+//             auto it = std::find_if(chosenFoods.begin(), chosenFoods.end(), [&](auto &cf)
+//                                    { return cf.first == foods[index].second; });
+//             if (it != chosenFoods.end())
+//             {
+//                 if (it->second.first < maxQuantity)
+//                     it->second.first++; // increase quantity but not beyond max
+//             }
+//             else
+//             {
+//                 chosenFoods.push_back({foods[index].second, {1, foods[index].first}});
+//             }
+//         }
+
+//         if (_kbhit())
+//         {
+//             int k = _getch();
+//             if (k == 8) // BACKSPACE
+//             {
+//                 auto it = std::find_if(chosenFoods.begin(), chosenFoods.end(), [&](auto &cf)
+//                                        { return cf.first == foods[index].second; });
+//                 if (it != chosenFoods.end())
+//                 {
+//                     it->second.first--; // decrease quantity
+//                     if (it->second.first <= 0)
+//                         chosenFoods.erase(it); // remove if 0
+//                 }
+//             }
+//         }
+
+//         if (pressedEsc)
+//         {
+//             pressedEsc = false;
+//             break; // exit food menu
+//         }
+
+//         if (pressedCancelPayment)
+//         {
+//             for (auto it = chosenFoods.begin(); it != chosenFoods.end();)
+//             {
+//                 if (std::find_if(foods.begin(), foods.end(), [&](auto &f)
+//                                  { return f.second == it->first; }) != foods.end())
+//                     it = chosenFoods.erase(it);
+//                 else
+//                     ++it;
+//             }
+//         }
+//     }
+// }
+
 void chooseFood(
     int menuIndex,
     std::vector<std::pair<double, std::string>> &foods,
@@ -386,7 +518,8 @@ void chooseFood(
     std::chrono::high_resolution_clock::time_point &lastFrame,
     std::string introPhrase,
     bool choosing1,
-    std::vector<std::pair<std::string, std::string>> &colors)
+    std::vector<std::pair<std::string, std::string>> &colors,
+    int maxQuantity = 5) // <-- set default max quantity per food
 {
     removeCursor();
     bool choosing2 = true;
@@ -400,38 +533,38 @@ void chooseFood(
     while (choosing2)
     {
         if (initialClear)
-        {
             properClear();
-        }
         else
-        {
-            hardClear();
-            initialClear = true;
-        }
+            hardClear(), initialClear = true;
+
         std::string frame;
         introduction(accumilator, dt, speed, frame, lastFrame, introPhrase, colors);
+
         for (int i = 0; i < foods.size(); i++)
         {
             std::ostringstream ss;
             bool selected = false;
+            int quantity = 0;
+
             for (auto &cf : chosenFoods)
             {
                 if (cf.first == foods[i].second)
+                {
                     selected = true;
+                    quantity = cf.second.first;
+                }
             }
 
             ss << std::fixed << std::setprecision(2) << foods[i].first;
-            std::string formatedString = ss.str();
+            std::string formattedString = ss.str();
+
             if (i == index)
-            {
-                frame += u8" ► \033[1;92m$" + formatedString + " " + foods[i].second + "                       " + "\033[0m";
-            }
+                frame += u8" ► \033[1;92m$" + formattedString + " " + foods[i].second + "                       " + "\033[0m";
             else
-            {
-                frame += u8"   $" + formatedString + " " + foods[i].second + "                       ";
-            }
+                frame += u8"   $" + formattedString + " " + foods[i].second + "                       ";
+
             if (selected)
-                frame += " [selected]";
+                frame += " [selected x" + std::to_string(quantity) + "]";
             frame += '\n';
         }
 
@@ -440,21 +573,18 @@ void chooseFood(
         int indFood = 1;
         for (auto &cf : chosenFoods)
         {
-            frame += " [" + std::to_string(indFood) + "] " + cf.first + " x" + std::to_string(cf.second.first) + " = $" + std::to_string(cf.second.second * cf.second.first) + '\n';
+            frame += " [" + std::to_string(indFood) + "] " + cf.first + " x" + std::to_string(cf.second.first) +
+                     " = $" + std::to_string(cf.second.second * cf.second.first) + '\n';
             total += cf.second.first * cf.second.second;
             indFood++;
         }
-        frame += "\n                                 ";
-        frame += "\n                                 ";
-        frame += "\n                                 ";
-        frame += "\n                                 ";
+
         std::ostringstream sis;
         sis << std::fixed << std::setprecision(2) << total;
         std::string tot = sis.str();
         frame += u8"\n═════════════════════════════════                          ";
         frame += "\033[1;32m \nTotal: $" + tot + "                                ";
         frame += u8"\033[0m\n═════════════════════════════════                           \n";
-        frame += "                          ";
 
         std::cout << frame;
 
@@ -467,7 +597,8 @@ void chooseFood(
                                    { return cf.first == foods[index].second; });
             if (it != chosenFoods.end())
             {
-                (*it).second.first++;
+                if (it->second.first < maxQuantity)
+                    it->second.first++; // increase quantity but not beyond max
             }
             else
             {
@@ -475,10 +606,26 @@ void chooseFood(
             }
         }
 
+        if (_kbhit())
+        {
+            int k = _getch();
+            if (k == 8) // BACKSPACE
+            {
+                auto it = std::find_if(chosenFoods.begin(), chosenFoods.end(), [&](auto &cf)
+                                       { return cf.first == foods[index].second; });
+                if (it != chosenFoods.end())
+                {
+                    it->second.first--; // decrease quantity
+                    if (it->second.first <= 0)
+                        chosenFoods.erase(it); // remove if 0
+                }
+            }
+        }
+
         if (pressedEsc)
         {
             pressedEsc = false;
-            break; // exit food menu to main menu
+            break; // exit food menu
         }
 
         if (pressedCancelPayment)
@@ -487,9 +634,7 @@ void chooseFood(
             {
                 if (std::find_if(foods.begin(), foods.end(), [&](auto &f)
                                  { return f.second == it->first; }) != foods.end())
-                {
                     it = chosenFoods.erase(it);
-                }
                 else
                     ++it;
             }
