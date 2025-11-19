@@ -65,11 +65,12 @@ void hideCursor()
     SetConsoleCursorInfo(handle, &inf);
 }
 
-void hardClearScreen () {
+void hardClearScreen()
+{
 #ifdef _WIN32
-            system("cls");
+    system("cls");
 #else
-            system("clear");
+    system("clear");
 #endif
 }
 
@@ -123,7 +124,8 @@ void choicesYM(int &chosen, std::vector<std::pair<std::string, std::string>> &ch
         if (index == -2)
             choosing = false;
 
-        if (keyError) {
+        if (keyError)
+        {
             std::cout << u8R"(
 ┌───────────────────┐
 │   INVALID INPUT   │
@@ -153,11 +155,52 @@ void askUsername(std::string &username, bool &errorName,
     }
 }
 
+std::string getPassword()
+{
+    std::string pwd;
+    char c;
+    while (true)
+    {
+        c = _getch();
+
+        if (c == 13)
+        { // ENTER
+            std::cout << "\n";
+            break;
+        }
+
+        if (c == 8) // BACKSPACE
+        {
+            if (!pwd.empty())
+            {
+                pwd.pop_back();
+                std::cout << "\b \b";
+            }
+            continue;
+        }
+
+        // if (c == 27)
+        // { // ESC
+        //     // loggingIn = false;
+        //     return "";
+        // }
+
+        pwd.push_back(c);
+        std::cout << '*';
+    }
+
+    return pwd;
+}
+
 void askPassword(std::string username, std::string &password, bool &errPassword,
                  std::vector<std::pair<std::string, std::string>> &allowedUsers)
 {
+
+    while (_kbhit())
+        _getch();
+
     std::cout << "Password: ";
-    std::getline(std::cin, password);
+    password = getPassword();
 
     errPassword = true;
     for (const auto &u : allowedUsers)
