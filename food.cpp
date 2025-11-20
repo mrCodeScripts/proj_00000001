@@ -492,9 +492,17 @@ void chooseFood(
         if (pressedBackspace)
         {
             pressedBackspace = false;
-            auto it = std::find_if(chosenFoods.begin(), chosenFoods.end(), [&](auto &cf) {
-                return cf.first == foods[index].second;
-            });
+            auto it = std::find_if(chosenFoods.begin(), chosenFoods.end(), [&](auto &cf)
+                                   { return cf.first == foods[index].second; });
+            long long ind = std::distance(chosenFoods.begin(), it);
+            if (chosenFoods[ind].second.first == 0)
+            {
+                chosenFoods.erase(chosenFoods.begin() + ind);
+            }
+            else
+            {
+                chosenFoods[ind].second.first--;
+            }
         }
         if (pressedEsc)
         {
