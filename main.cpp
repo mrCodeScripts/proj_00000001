@@ -649,6 +649,325 @@ int main()
 
 /*
 
+#include <iostream>
+#include <vector>
+#include <string>
+#include <conio.h>
+#include <windows.h>
+#include <thread>
+#include <chrono>
+
+// --- Windows clear & cursor ---
+void properClear() { system("cls"); }
+void hideCursor()
+{
+    HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 100;
+    info.bVisible = FALSE;
+    SetConsoleCursorInfo(handle, &info);
+}
+void showCursor()
+{
+    HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
+    CONSOLE_CURSOR_INFO info;
+    info.dwSize = 100;
+    info.bVisible = TRUE;
+    SetConsoleCursorInfo(handle, &info);
+}
+
+// --- Detect keyboard for menu navigation ---
+void detectKeyboard(int &index, int maxIndex, int &chosen, bool &keyError)
+{
+    if (_kbhit())
+    {
+        int k = _getch();
+        if (k == 0 || k == 224)
+        { // arrow keys
+            k = _getch();
+            switch (k)
+            {
+            case 72: // UP
+                keyError = false;
+                index--;
+                if (index < 0)
+                    index = maxIndex;
+                break;
+            case 80: // DOWN
+                keyError = false;
+                index++;
+                if (index > maxIndex)
+                    index = 0;
+                break;
+            default:
+                keyError = true;
+                break;
+            }
+        }
+        else if (k == 13) // Enter
+        {
+            keyError = false;
+            chosen = index;
+            index = -2;
+        }
+        else
+        {
+            keyError = true;
+        }
+    }
+}
+
+// --- Generic menu function ---
+void choicesYM(int &chosen, std::vector<std::pair<std::string, std::string>> &choices,
+               const std::string &title)
+{
+    bool choosing = true;
+    int index = 0;
+    bool keyError = false;
+
+    hideCursor();
+    while (choosing)
+    {
+        properClear();
+        std::cout << "\n==========================\n";
+        std::cout << "| " << title << " |\n";
+        std::cout << "==========================\n\n";
+
+        for (int i = 0; i < choices.size(); i++)
+        {
+            if (i == index)
+                std::cout << "👉 " << choices[i].first << "\n";
+            else
+                std::cout << "   " << choices[i].first << "\n";
+        }
+
+        if (keyError)
+            std::cout << "\nINVALID INPUT!\n";
+
+        detectKeyboard(index, static_cast<int>(choices.size() - 1), chosen, keyError);
+        if (index == -2)
+            choosing = false;
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    showCursor();
+}
+
+// --- Username & password ---
+void askUsername(std::string &username, bool &errorName,
+                 std::vector<std::pair<std::string, std::string>> &allowedUsers)
+{
+    std::cout << "Username: ";
+    std::getline(std::cin, username);
+
+    errorName = true;
+    for (const auto &u : allowedUsers)
+    {
+        if (u.first == username)
+        {
+            errorName = false;
+            break;
+        }
+    }
+}
+
+std::string getPassword()
+{
+    std::string pwd;
+    char c;
+    while (true)
+    {
+        c = _getch();
+        if (c == 13) // Enter
+        {
+            std::cout << "\n";
+            break;
+        }
+        if (c == 8) // Backspace
+        {
+            if (!pwd.empty())
+            {
+                pwd.pop_back();
+                std::cout << "\b \b";
+            }
+            continue;
+        }
+        pwd.push_back(c);
+        std::cout << '*';
+    }
+    return pwd;
+}
+
+void askPassword(const std::string &username, std::string &password, bool &errPassword,
+                 std::vector<std::pair<std::string, std::string>> &allowedUsers)
+{
+    password = getPassword();
+    errPassword = true;
+    for (auto &u : allowedUsers)
+        if (u.first == username && u.second == password)
+        {
+            errPassword = false;
+            break;
+        }
+}
+
+// --- Age input ---
+void getAge()
+{
+    int age;
+    std::cout << "\nENTER YOUR AGE: ";
+    std::cin >> age;
+    std::cin.ignore();
+
+    if (age >= 15 && age <= 17)
+        std::cout << "ELIGIBLE FOR SK CATEGORY (SANGGUNIANG KABATAAN)\n";
+    else if (age >= 18 && age <= 30)
+        std::cout << "ELIGIBLE FOR SK AND BARANGGAY CATEGORY\n";
+    else if (age >= 31 && age <= 60)
+        std::cout << "ELIGIBLE FOR BARANGGAY OFFICIAL CATEGORY\n";
+    else if (age >= 61)
+        std::cout << "ELIGIBLE FOR BARANGGAY OFFICIAL WITH ASSISTANT CATEGORY\n";
+    else
+        std::cout << "NOT ELIGIBLE TO PARTICIPATE.\n";
+}
+
+// --- Vote menu ---
+void vote()
+{
+    int choice = 0;
+    std::vector<std::pair<std::string, std::string>> voteType = {
+        {"Iliterate", "I"},
+        {"Person with disabilities", "P"},
+        {"Senior Citizen", "C"},
+        {"None", "N"},
+    };
+
+    choicesYM(choice, voteType, "CHOOSE TYPE OF VOTER");
+
+    switch (choice)
+    {
+    case 0:
+        std::cout << "\n==========================\n| YOU NEED AN ASSISTANT! |\n==========================\n";
+        getAge();
+        break;
+    case 1:
+    case 2:
+    case 3:
+        getAge();
+        break;
+    default:
+        std::cout << "INVALID SELECTION!\n";
+        break;
+    }
+}
+
+// --- Main ---
+int main()
+{
+    int MAX_ATTEMPTS = 3;
+    int LOCK_DURATION = 10;
+
+    std::vector<std::pair<std::string, std::string>> allowedUsers = {
+        {"Admin", "12345"},
+        {"Voter", "12345"}};
+
+    std::string username, password;
+    bool errorName = false, errorPassword = false;
+    int attemptsLeft = MAX_ATTEMPTS;
+    bool locked = false;
+
+    bool usernameAlreadySet = false;
+
+    while (true)
+    {
+        properClear();
+
+        // Display attempts remaining at top
+        std::cout << "LOGIN ATTEMPTS REMAINING: " << attemptsLeft << "\n\n";
+
+        // Locked timer
+        if (locked)
+        {
+            for (int i = LOCK_DURATION; i > 0; i--)
+            {
+                properClear();
+                std::cout << "ACCOUNT LOCKED! Wait " << i << " seconds...\n";
+                std::this_thread::sleep_for(std::chrono::seconds(1));
+            }
+            locked = false;
+            attemptsLeft = MAX_ATTEMPTS;
+            usernameAlreadySet = false; // reset username after lock
+            continue;
+        }
+
+        // Username input
+        if (!usernameAlreadySet)
+        {
+            askUsername(username, errorName, allowedUsers);
+            if (errorName)
+                continue;
+            usernameAlreadySet = true;
+        }
+        else
+        {
+            std::cout << "Username: " << username << "\n\n";
+        }
+
+        std::cout << "Password: ";
+        askPassword(username, password, errorPassword, allowedUsers);
+
+        if (errorPassword)
+        {
+            attemptsLeft--;
+            if (attemptsLeft <= 0)
+            {
+                locked = true;
+            }
+            continue;
+        }
+
+        // Successful login
+        attemptsLeft = MAX_ATTEMPTS;
+        properClear();
+        std::cout << "=========================\n| Now you are logged in! |\n=========================\n";
+        std::cout << "WELCOME " << username << "\n\n";
+
+        if (username == "Admin")
+        {
+            int adminChoice = 0;
+            std::vector<std::pair<std::string, std::string>> adminChoices = {{"Yes", "yes"}, {"No", "no"}};
+            choicesYM(adminChoice, adminChoices, "ACCESS ADMIN SETTINGS?");
+            if (adminChoice == 0)
+            {
+                std::cout << "ADMIN SETTINGS ACCESSED\n";
+            }
+            else
+            {
+                vote(); // if admin says No, go to voting
+            }
+        }
+        else
+        {
+            vote(); // normal user goes directly to voting
+        }
+
+        std::cout << "\nPress ESC to logout and return to login screen...\n";
+        while (true)
+        {
+            if (_kbhit())
+            {
+                int k = _getch();
+                if (k == 27) // ESC
+                {
+                    usernameAlreadySet = false; // allow choosing another account
+                    break;
+                }
+            }
+        }
+    }
+
+    return 0;
+}
 
 
 */
