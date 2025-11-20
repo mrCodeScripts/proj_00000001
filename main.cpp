@@ -318,6 +318,8 @@ int main()
 
  */
 
+
+
 #include <iostream>
 #include <vector>
 #include <string>
@@ -476,19 +478,17 @@ std::string getPassword()
     return pwd;
 }
 
-void askPassword(std::string username, std::string &password, bool &errPassword,
+void askPassword(const std::string &username, std::string &password, bool &errPassword,
                  std::vector<std::pair<std::string, std::string>> &allowedUsers)
 {
     password = getPassword();
     errPassword = true;
-    for (const auto &u : allowedUsers)
-    {
+    for (auto &u : allowedUsers)
         if (u.first == username && u.second == password)
         {
             errPassword = false;
             break;
         }
-    }
 }
 
 // --- Age input ---
@@ -553,37 +553,45 @@ int main()
 
     std::string username, password;
     bool errorName = false, errorPassword = false;
-
     int attemptsLeft = MAX_ATTEMPTS;
     bool locked = false;
+
+    bool usernameAlreadySet = false;
 
     while (true)
     {
         properClear();
 
+        // Display attempts remaining at top
+        std::cout << "LOGIN ATTEMPTS REMAINING: " << attemptsLeft << "\n\n";
+
+        // Locked timer
         if (locked)
         {
             for (int i = LOCK_DURATION; i > 0; i--)
             {
                 properClear();
-                std::cout << "============================\n"
-                             "| ACCOUNT LOCKED!          |\n"
-                             "| Wait " << i << " seconds |\n"
-                             "============================\n";
+                std::cout << "ACCOUNT LOCKED! Wait " << i << " seconds...\n";
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
             locked = false;
             attemptsLeft = MAX_ATTEMPTS;
+            usernameAlreadySet = false; // reset username after lock
+            continue;
         }
 
-        if (errorName)
-            std::cout << "============================\n| Username does not exist! |\n============================\n\n";
-        if (errorPassword)
-            std::cout << "=======================\n| Incorrect Password! |\n=======================\n\n";
-
-        askUsername(username, errorName, allowedUsers);
-        if (errorName)
-            continue;
+        // Username input
+        if (!usernameAlreadySet)
+        {
+            askUsername(username, errorName, allowedUsers);
+            if (errorName)
+                continue;
+            usernameAlreadySet = true;
+        }
+        else
+        {
+            std::cout << "Username: " << username << "\n\n";
+        }
 
         std::cout << "Password: ";
         askPassword(username, password, errorPassword, allowedUsers);
@@ -594,7 +602,6 @@ int main()
             if (attemptsLeft <= 0)
             {
                 locked = true;
-                continue;
             }
             continue;
         }
@@ -629,10 +636,19 @@ int main()
         {
             int k = getch_linux();
             if (k == 27) // ESC
+            {
+                usernameAlreadySet = false; // allow choosing another account
                 break;
+            }
         }
     }
 
     return 0;
 }
 
+
+/*
+
+
+
+*/
