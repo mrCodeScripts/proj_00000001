@@ -32,39 +32,39 @@ struct ChosenFood
     double price;
 };
 
-// ALL LENGTH TEXT COUNTER
 int countUTF8Chars(const std::string &str)
 {
     int count = 0;
     for (size_t i = 0; i < str.size();)
     {
-        unsigned char c = str[i];
-        if ((c & 0x80) == 0)
+        if (str[i] == '\033') // ANSI escape start
         {
-            // ASCII character (1 byte)
-            i += 1;
-        }
-        else if ((c & 0xE0) == 0xC0)
-        {
-            // 2-byte UTF-8
-            i += 2;
-        }
-        else if ((c & 0xF0) == 0xE0)
-        {
-            // 3-byte UTF-8
-            i += 3;
-        }
-        else if ((c & 0xF8) == 0xF0)
-        {
-            // 4-byte UTF-8
-            i += 4;
+            i++; // skip '\033'
+            if (i < str.size() && str[i] == '[')
+            {
+                i++; // skip '['
+                // skip until 'm'
+                while (i < str.size() && str[i] != 'm')
+                    i++;
+                if (i < str.size())
+                    i++; // skip 'm'
+            }
         }
         else
         {
-            // invalid UTF-8 byte
-            i += 1;
+            unsigned char c = str[i];
+            if ((c & 0x80) == 0)
+                i += 1;
+            else if ((c & 0xE0) == 0xC0)
+                i += 2;
+            else if ((c & 0xF0) == 0xE0)
+                i += 3;
+            else if ((c & 0xF8) == 0xF0)
+                i += 4;
+            else
+                i += 1;
+            count++;
         }
-        count++;
     }
     return count;
 }
@@ -496,14 +496,16 @@ void chooseFood(
 
         std::string frame;
         introduction(accumilator, dt, speed, frame, lastFrame, introPhrase, colors);
-
+        std::string frameInnerDisplay;
         for (int i = 0; i < (int)foods.size(); i++)
         {
             std::ostringstream ss;
             bool selected = false;
 
-            for (auto &z : chosenFoods) {
-                if (z.name == foods[i].name) selected = true;
+            for (auto &z : chosenFoods)
+            {
+                if (z.name == foods[i].name)
+                    selected = true;
             }
 
             ss << std::fixed << std::setprecision(2) << foods[i].price;
@@ -512,11 +514,11 @@ void chooseFood(
 
             if (i == index)
             {
-                food_display += u8" ► \033[1;92m$" + formatedString + " " + foods[i].name;
+                food_display += u8"║ ► \033[1;92m$" + formatedString + " " + foods[i].name;
             }
             else
             {
-                food_display += u8"   \033[1;92m$" + formatedString + " " + foods[i].name;
+                food_display += u8"║   \033[1;92m$" + formatedString + " " + foods[i].name;
             }
 
             // Calculate padding so stock info aligns
@@ -527,18 +529,83 @@ void chooseFood(
             food_display += std::string(padding, ' ');
 
             // Add stock info
-            food_display += (foods[i].stock > 0 ? "   ║\033[1;34m [stock: " + std::to_string(foods[i].stock) + "]"
-                                                : "   ║\033[1;31m [OUT OF STOCK]      \033[0m");
-            
+            food_display += (foods[i].stock > 0 ? "\033[0m║\033[1;34m [stock: " + std::to_string(foods[i].stock) + "]\033[0m"
+                                                : "\033[0m║\033[1;31m [OUT OF STOCK]\033[0m");
 
             int totalLen2 = countUTF8Chars(food_display);
             int padding2 = tabSizeRightPadding2 - totalLen2;
-            if (padding2 < 0)padding2 = 0;
+            if (padding2 < 0)
+                padding2 = 0;
             food_display += std::string(padding2, ' ');
-            food_display += " ║\033[1;34m [selected] \033[0m";
+            food_display += u8"║";
+            if (selected)
+            {
+                food_display += " \033[1;34m [selected] \033[0m";
+            }
 
-            frame += food_display + '\n';
+            frameInnerDisplay += food_display + '\n';
+            // for (int t = 0; t < totalLen; t++) frame += u8"═";
         }
+
+        for (int t = 0; t <= tabSizeRightPadding2; t++)
+        {
+            if (t == 0)
+            {
+                frame += u8"╔";
+            }
+            else if (t == tabSizeRightPadding1)
+            {
+                frame += u8"╦";
+            }
+            else if (t == tabSizeRightPadding2)
+            {
+                frame += u8"╗\n";
+            }
+            else
+            {
+                frame += u8"═";
+            }
+        }
+        for (int t = 0; t <= tabSizeRightPadding2; t++)
+        {
+            if (t == 0)
+            {
+                frame += u8"║";
+            }
+            else if (t == tabSizeRightPadding1)
+            {
+                frame += u8"║";
+            }
+            else if (t == tabSizeRightPadding2)
+            {
+                frame += u8"║\n";
+            }
+            else
+            {
+                frame += u8" ";
+            }
+        }
+        // https://en.wikipedia.org/wiki/Box-drawing_characters
+        for (int t = 0; t <= tabSizeRightPadding2; t++)
+        {
+            if (t == 0)
+            {
+                frame += u8"╠";
+            }
+            else if (t == tabSizeRightPadding1)
+            {
+                frame += u8"╬";
+            }
+            else if (t == tabSizeRightPadding2)
+            {
+                frame += u8"╣\n";
+            }
+            else
+            {
+                frame += u8"═";
+            }
+        }
+        frame += frameInnerDisplay;
 
         double total = 0;
         frame += "\nCurrent selections:\n";
@@ -718,7 +785,7 @@ void menuSelection(
         {
             pressEnter = false;
             std::string foodIntroPhrase = "Select your food (ENTER to add, ESC to go back, C to cancel current menu)";
-            chooseFood(menuIndex, restaurantMenu[menuIndex].foods, chosenFoods, accumilator, dt, speed, lastFrame, foodIntroPhrase, choosing, 50, 100, colors);
+            chooseFood(menuIndex, restaurantMenu[menuIndex].foods, chosenFoods, accumilator, dt, speed, lastFrame, foodIntroPhrase, choosing, 50, 80, colors);
             initialClear = false;
         }
 
