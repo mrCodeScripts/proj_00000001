@@ -1,4 +1,5 @@
 #include <iostream>
+#include <iterator>
 #include <windows.h>
 #include <sstream>
 #include <thread>
@@ -11,18 +12,21 @@
 #include <iomanip> // for std::setw
 
 // ---------- Data structures (replacing pairs) ----------
-struct Food {
+struct Food
+{
     double price;
     std::string name;
     int stock;
 };
 
-struct MenuCategory {
+struct MenuCategory
+{
     std::string name;
     std::vector<Food> foods;
 };
 
-struct ChosenFood {
+struct ChosenFood
+{
     std::string name;
     int quantity;
     double price;
@@ -343,7 +347,8 @@ void paymentProcess(std::vector<ChosenFood> &chosenFoods, bool &choosing)
             hardClear();
             initialCls = true;
         }
-        if (invalidInput) {
+        if (invalidInput)
+        {
             hardClear();
             std::cout << "\033[31m" << u8R"(
 ╔═══════════════════════════════════╗
@@ -354,7 +359,8 @@ void paymentProcess(std::vector<ChosenFood> &chosenFoods, bool &choosing)
                       << std::endl;
             std::cout << std::endl;
             invalidInput = false;
-        } else if (paymentNotEnough)
+        }
+        else if (paymentNotEnough)
         {
             hardClear();
             std::cout << "\033[31m" << u8R"(
@@ -379,7 +385,8 @@ void paymentProcess(std::vector<ChosenFood> &chosenFoods, bool &choosing)
         std::cout << u8"\033[0m\n═════════════════════════════════                           \n";
         std::cout << "Payment: $";
         std::cin >> payment;
-        if (std::cin.fail()) {
+        if (std::cin.fail())
+        {
             std::cin.clear();
             std::cin.ignore(1000, '\n');
             invalidInput = true;
@@ -435,6 +442,7 @@ void chooseFood(
     bool pressedCancelPayment = false;
     bool pressedBackspace = false;
     bool initialClear = false;
+    // bool notEnoughStock = false;
 
     while (choosing2)
     {
@@ -449,6 +457,16 @@ void chooseFood(
         }
         std::string frame;
         introduction(accumilator, dt, speed, frame, lastFrame, introPhrase, colors);
+
+//         if (notEnoughStock)
+//         {
+//             frame += u8R"(\033[31m
+// ╔═══════════════════════════════════════╗
+// ║           Payment Not Enough          ║
+// ╚═══════════════════════════════════════╝
+// \033[0m)" + '\n';
+//         }
+
         for (int i = 0; i < (int)foods.size(); i++)
         {
             std::ostringstream ss;
@@ -463,15 +481,17 @@ void chooseFood(
             std::string formatedString = ss.str();
             if (i == index)
             {
-                frame += u8" ► \033[1;92m$" + formatedString + " " + foods[i].name + "                       " + "\033[0m";
+                frame += u8" ► \033[1;92m$" + formatedString + " " + foods[i].name + (foods[i].stock > 0 ? "    \033[1;34m [stock: " + std::to_string(foods[i].stock) + "] " : "    \033[1;31m [OUT OF STOCK]   ") + "\033[0m                       " + "\033[0m";
             }
             else
             {
-                frame += u8"   $" + formatedString + " " + foods[i].name + "                       ";
+                // frame += u8"   $" + formatedString + " " + foods[i].name + "    \033[1;34m[stock: " + std::to_string(foods[i].stock) + "]\033[0m                       ";
+                frame += u8"   \033[1;92m$" + formatedString + " " + foods[i].name + (foods[i].stock > 0 ? "    \033[1;34m [stock: " + std::to_string(foods[i].stock) + "] " : "    \033[1;31m [OUT OF STOCK]   ") + "\033[0m                       " + "\033[0m";
             }
             if (selected)
-                frame += " [selected]";
-            else frame += "                           ";
+                frame += " [selected]   ";
+            else
+                frame += "                                                  ";
             frame += '\n';
         }
 
@@ -515,9 +535,18 @@ void chooseFood(
             pressEnter = false;
             auto it = std::find_if(chosenFoods.begin(), chosenFoods.end(), [&](auto &cf)
                                    { return cf.name == foods[index].name; });
+            auto itFoods = std::find_if(foods.begin(), foods.end(), [&](auto &f)
+                                        { return f.name == foods[index].name; });
             if (it != chosenFoods.end())
             {
-                it->quantity++;
+                if (itFoods != foods.end())
+                {
+                    if ((*itFoods).stock > 0)
+                    {
+                        (*it).quantity++;
+                        (*itFoods).stock--;
+                    }
+                }
             }
             else
             {
@@ -529,6 +558,8 @@ void chooseFood(
             pressedBackspace = false;
             auto it = std::find_if(chosenFoods.begin(), chosenFoods.end(), [&](auto &cf)
                                    { return cf.name == foods[index].name; });
+            auto itFoods = std::find_if(foods.begin(), foods.end(), [&](auto &f)
+                                        { return f.name == foods[index].name; });
             if (it != chosenFoods.end())
             {
                 if (it->quantity <= 1)
@@ -538,6 +569,9 @@ void chooseFood(
                 else
                 {
                     it->quantity--;
+                    if (itFoods != foods.end()) {
+                        
+                    }
                 }
             }
         }
@@ -717,4 +751,3 @@ int main()
     menuSelection(restaurantMenu, accumilator, dt, speed, lastFrame, colors, paymentColors, payAccumilator, paydt, paySpeed);
     return 0;
 }
-
