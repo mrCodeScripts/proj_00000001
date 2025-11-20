@@ -570,7 +570,6 @@ void chooseFood(
                 {
                     it->quantity--;
                     if (itFoods != foods.end()) {
-                        
                     }
                 }
             }
