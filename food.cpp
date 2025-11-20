@@ -32,6 +32,43 @@ struct ChosenFood
     double price;
 };
 
+// ALL LENGTH TEXT COUNTER
+int countUTF8Chars(const std::string &str)
+{
+    int count = 0;
+    for (size_t i = 0; i < str.size();)
+    {
+        unsigned char c = str[i];
+        if ((c & 0x80) == 0)
+        {
+            // ASCII character (1 byte)
+            i += 1;
+        }
+        else if ((c & 0xE0) == 0xC0)
+        {
+            // 2-byte UTF-8
+            i += 2;
+        }
+        else if ((c & 0xF0) == 0xE0)
+        {
+            // 3-byte UTF-8
+            i += 3;
+        }
+        else if ((c & 0xF8) == 0xF0)
+        {
+            // 4-byte UTF-8
+            i += 4;
+        }
+        else
+        {
+            // invalid UTF-8 byte
+            i += 1;
+        }
+        count++;
+    }
+    return count;
+}
+
 // ---------- UI utilities (unchanged logic) ----------
 void makeTopBottomEdgeBorder(int bxLen, std::string &rEdgeChar, std::string &lEdgeChar, std::string &midEdge, std::vector<std::pair<std::string, std::string>> &colors, std::string &frame)
 {
@@ -431,6 +468,8 @@ void chooseFood(
     std::chrono::high_resolution_clock::time_point &lastFrame,
     std::string introPhrase,
     bool choosing1,
+    int tabSizeRightPadding1,
+    int tabSizeRightPadding2,
     std::vector<std::pair<std::string, std::string>> &colors)
 {
     removeCursor();
@@ -442,7 +481,6 @@ void chooseFood(
     bool pressedCancelPayment = false;
     bool pressedBackspace = false;
     bool initialClear = false;
-    // bool notEnoughStock = false;
 
     while (choosing2)
     {
@@ -455,44 +493,51 @@ void chooseFood(
             hardClear();
             initialClear = true;
         }
+
         std::string frame;
         introduction(accumilator, dt, speed, frame, lastFrame, introPhrase, colors);
-
-//         if (notEnoughStock)
-//         {
-//             frame += u8R"(\033[31m
-// ╔═══════════════════════════════════════╗
-// ║           Payment Not Enough          ║
-// ╚═══════════════════════════════════════╝
-// \033[0m)" + '\n';
-//         }
 
         for (int i = 0; i < (int)foods.size(); i++)
         {
             std::ostringstream ss;
             bool selected = false;
-            for (auto &cf : chosenFoods)
-            {
-                if (cf.name == foods[i].name)
-                    selected = true;
+
+            for (auto &z : chosenFoods) {
+                if (z.name == foods[i].name) selected = true;
             }
 
             ss << std::fixed << std::setprecision(2) << foods[i].price;
             std::string formatedString = ss.str();
+            std::string food_display;
+
             if (i == index)
             {
-                frame += u8" ► \033[1;92m$" + formatedString + " " + foods[i].name + (foods[i].stock > 0 ? "    \033[1;34m [stock: " + std::to_string(foods[i].stock) + "] " : "    \033[1;31m [OUT OF STOCK]   ") + "\033[0m                       " + "\033[0m";
+                food_display += u8" ► \033[1;92m$" + formatedString + " " + foods[i].name;
             }
             else
             {
-                // frame += u8"   $" + formatedString + " " + foods[i].name + "    \033[1;34m[stock: " + std::to_string(foods[i].stock) + "]\033[0m                       ";
-                frame += u8"   \033[1;92m$" + formatedString + " " + foods[i].name + (foods[i].stock > 0 ? "    \033[1;34m [stock: " + std::to_string(foods[i].stock) + "] " : "    \033[1;31m [OUT OF STOCK]   ") + "\033[0m                       " + "\033[0m";
+                food_display += u8"   \033[1;92m$" + formatedString + " " + foods[i].name;
             }
-            if (selected)
-                frame += " [selected]   ";
-            else
-                frame += "                                                  ";
-            frame += '\n';
+
+            // Calculate padding so stock info aligns
+            int totalLen = countUTF8Chars(food_display);
+            int padding = tabSizeRightPadding1 - totalLen;
+            if (padding < 0)
+                padding = 0;
+            food_display += std::string(padding, ' ');
+
+            // Add stock info
+            food_display += (foods[i].stock > 0 ? "   ║\033[1;34m [stock: " + std::to_string(foods[i].stock) + "]"
+                                                : "   ║\033[1;31m [OUT OF STOCK]      \033[0m");
+            
+
+            int totalLen2 = countUTF8Chars(food_display);
+            int padding2 = tabSizeRightPadding2 - totalLen2;
+            if (padding2 < 0)padding2 = 0;
+            food_display += std::string(padding2, ' ');
+            food_display += " ║\033[1;34m [selected] \033[0m";
+
+            frame += food_display + '\n';
         }
 
         double total = 0;
@@ -504,32 +549,22 @@ void chooseFood(
             total += cf.quantity * cf.price;
             indFood++;
         }
-        frame += "                                      \n";
-        frame += "                                      \n";
-        frame += "                                      \n";
-        frame += "                                      \n";
+
+        // Add spacing and total
+        frame += std::string(4 * 38, ' ') + "\n"; // spacing lines
         std::ostringstream sis;
         sis << std::fixed << std::setprecision(2) << total;
         std::string tot = sis.str();
         frame += u8"\n═════════════════════════════════                          ";
         frame += "\033[1;32m \nTotal: $" + tot + "                                ";
         frame += u8"\033[0m\n═════════════════════════════════                           \n";
-        frame += "                                              \n";
-        frame += "                                              \n";
-        frame += "                                              \n";
-        frame += "                                              \n";
-        frame += "                                              \n";
-        frame += "                                              \n";
-        frame += "                                              \n";
-        frame += "                                              \n";
-        frame += "                                              \n";
-        frame += "                                              \n";
-        frame += "                          ";
+        frame += std::string(12 * 46, ' ') + "\n"; // extra spacing at bottom
 
         std::cout << frame;
 
         detectKeyboard(index, (int)foods.size() - 1, pressEnter, pressedEsc, pressedPayment, pressedCancelPayment, pressedBackspace);
 
+        // ---- ENTER: add food ----
         if (pressEnter)
         {
             pressEnter = false;
@@ -539,20 +574,23 @@ void chooseFood(
                                         { return f.name == foods[index].name; });
             if (it != chosenFoods.end())
             {
-                if (itFoods != foods.end())
+                if (itFoods != foods.end() && (*itFoods).stock > 0)
                 {
-                    if ((*itFoods).stock > 0)
-                    {
-                        (*it).quantity++;
-                        (*itFoods).stock--;
-                    }
+                    (*it).quantity++;
+                    (*itFoods).stock--;
                 }
             }
             else
             {
-                chosenFoods.push_back({foods[index].name, 1, foods[index].price});
+                if (itFoods != foods.end() && (*itFoods).stock > 0)
+                {
+                    chosenFoods.push_back({foods[index].name, 1, foods[index].price});
+                    (*itFoods).stock--;
+                }
             }
         }
+
+        // ---- BACKSPACE: remove food ----
         if (pressedBackspace && !chosenFoods.empty())
         {
             pressedBackspace = false;
@@ -565,24 +603,28 @@ void chooseFood(
                 if (it->quantity <= 1)
                 {
                     chosenFoods.erase(it);
+                    if (itFoods != foods.end())
+                        (*itFoods).stock++;
                 }
                 else
                 {
                     it->quantity--;
-                    if (itFoods != foods.end()) {
-                    }
+                    if (itFoods != foods.end())
+                        (*itFoods).stock++;
                 }
             }
         }
+
+        // ---- ESC: exit ----
         if (pressedEsc)
         {
             pressedEsc = false;
-            break; // exit food menu to main menu
+            break;
         }
 
+        // ---- Cancel payment / reset menu ----
         if (pressedCancelPayment)
         {
-            // remove chosenFoods items that belong to the current foods list (i.e., cancel this menu's selections)
             for (auto it = chosenFoods.begin(); it != chosenFoods.end();)
             {
                 if (std::find_if(foods.begin(), foods.end(), [&](auto &f)
@@ -676,7 +718,7 @@ void menuSelection(
         {
             pressEnter = false;
             std::string foodIntroPhrase = "Select your food (ENTER to add, ESC to go back, C to cancel current menu)";
-            chooseFood(menuIndex, restaurantMenu[menuIndex].foods, chosenFoods, accumilator, dt, speed, lastFrame, foodIntroPhrase, choosing, colors);
+            chooseFood(menuIndex, restaurantMenu[menuIndex].foods, chosenFoods, accumilator, dt, speed, lastFrame, foodIntroPhrase, choosing, 50, 100, colors);
             initialClear = false;
         }
 
