@@ -319,7 +319,8 @@ int main()
  */
 
 
-
+/*
+// LINUX VERSION
 #include <iostream>
 #include <vector>
 #include <string>
@@ -645,9 +646,7 @@ int main()
 
     return 0;
 }
-
-
-/*
+*/
 
 #include <iostream>
 #include <vector>
@@ -683,17 +682,17 @@ void detectKeyboard(int &index, int maxIndex, int &chosen, bool &keyError)
     {
         int k = _getch();
         if (k == 0 || k == 224)
-        { // arrow keys
+        { 
             k = _getch();
             switch (k)
             {
-            case 72: // UP
+            case 72: 
                 keyError = false;
                 index--;
                 if (index < 0)
                     index = maxIndex;
                 break;
-            case 80: // DOWN
+            case 80: 
                 keyError = false;
                 index++;
                 if (index > maxIndex)
@@ -704,7 +703,7 @@ void detectKeyboard(int &index, int maxIndex, int &chosen, bool &keyError)
                 break;
             }
         }
-        else if (k == 13) // Enter
+        else if (k == 13) 
         {
             keyError = false;
             chosen = index;
@@ -736,7 +735,7 @@ void choicesYM(int &chosen, std::vector<std::pair<std::string, std::string>> &ch
         for (int i = 0; i < choices.size(); i++)
         {
             if (i == index)
-                std::cout << "👉 " << choices[i].first << "\n";
+                std::cout << "> " << choices[i].first << "\n";
             else
                 std::cout << "   " << choices[i].first << "\n";
         }
@@ -866,20 +865,21 @@ int main()
 {
     int MAX_ATTEMPTS = 3;
     int LOCK_DURATION = 10;
-
     std::vector<std::pair<std::string, std::string>> allowedUsers = {
         {"Admin", "12345"},
         {"Voter", "12345"}};
-
     std::string username, password;
     bool errorName = false, errorPassword = false;
     int attemptsLeft = MAX_ATTEMPTS;
     bool locked = false;
-
     bool usernameAlreadySet = false;
 
     while (true)
     {
+
+        SetConsoleOutputCP(CP_UTF8);
+        SetConsoleCP(CP_UTF8);
+
         properClear();
 
         // Display attempts remaining at top
@@ -970,4 +970,3 @@ int main()
 }
 
 
-*/
