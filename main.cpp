@@ -657,7 +657,20 @@ int main()
 #include <chrono>
 
 // --- Windows clear & cursor ---
-void properClear() { system("cls"); }
+void hardClear () { 
+    #ifdef _WIN32
+        system("cls"); 
+    #else
+        system("clear"); 
+    #endif
+}
+
+void properClear () {
+    HANDLE hout = GetStdHandle(STD_OUTPUT_HANDLE);
+    COORD coord = {0, 0};
+    SetConsoleCursorPosition(hout, coord);
+}
+
 void hideCursor()
 {
     HANDLE handle = GetStdHandle(STD_OUTPUT_HANDLE);
@@ -723,11 +736,17 @@ void choicesYM(int &chosen, std::vector<std::pair<std::string, std::string>> &ch
     bool choosing = true;
     int index = 0;
     bool keyError = false;
+    bool initialClear = false;
 
     hideCursor();
     while (choosing)
     {
-        properClear();
+        if (initialClear) {
+            properClear();
+        } else {
+            hardClear();
+            initialClear = true;
+        }
         std::cout << "\n==========================\n";
         std::cout << "| " << title << " |\n";
         std::cout << "==========================\n\n";
@@ -873,6 +892,7 @@ int main()
     int attemptsLeft = MAX_ATTEMPTS;
     bool locked = false;
     bool usernameAlreadySet = false;
+    bool initialClear = false;
 
     while (true)
     {
@@ -881,6 +901,12 @@ int main()
         SetConsoleCP(CP_UTF8);
 
         properClear();
+        if (initialClear) {
+            properClear();
+        } else {
+            hardClear();
+            initialClear = true;
+        }
 
         // Display attempts remaining at top
         std::cout << "LOGIN ATTEMPTS REMAINING: " << attemptsLeft << "\n\n";

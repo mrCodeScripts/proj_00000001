@@ -254,6 +254,7 @@ void printReceipt(const std::vector<ChosenFood> &chosenFoods, double payment)
 
     frame << bottomLeft << repeat(horizontal, boxWidth - 2) << bottomRight << "\n";
 
+
     std::cout << frame.str();
 }
 
