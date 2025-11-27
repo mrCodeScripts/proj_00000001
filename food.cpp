@@ -1086,7 +1086,6 @@ int main()
         {"\033[1;92m", "\033[0m"},
         {"\033[1;93m", "\033[0m"},
         {"\033[1;97m", "\033[0m"}};
-
     // Build the restaurantMenu using MenuCategory and Food
     std::vector<MenuCategory> restaurantMenu = {
         {"🍔 Food Menu",

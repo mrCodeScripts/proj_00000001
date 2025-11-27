@@ -2,45 +2,26 @@
 #include <iomanip>
 #include <limits>
 #include <string>
+#include <ostream>
 
-int main() {
-    int tableW, tableH;
-    int highlightX = -1, highlightY = -1;
+int main()
+{
+    int tablex;
 
-    // --- Get table dimensions ---
-    std::cout << "Enter number of rows: ";
-    std::cin >> tableH;
-    std::cout << "Enter number of columns: ";
-    std::cin >> tableW;
+    std::cout << "Enter size: ";
+    std::cin >> tablex;
 
-    // --- Get highlight coordinates ---
-    std::cout << "Enter row to highlight (1-" << tableH << ", 0 for none): ";
-    std::cin >> highlightY;
-    std::cout << "Enter column to highlight (1-" << tableW << ", 0 for none): ";
-    std::cin >> highlightX;
-
-    // Convert to 0-based indices
-    highlightY--;
-    highlightX--;
-
-    // --- Clear screen ---
     std::cout << "\033[2J\033[1;1H" << std::flush;
 
-    // --- Render table ---
-    for (int i = 0; i < tableH; i++) {
-        for (int j = 0; j < tableW; j++) {
+    for (int i = 0; i < tablex; i++)
+    {
+        for (int j = 0; j < tablex; j++)
+        {
             int value = (i + 1) * (j + 1);
-
-            if (i == highlightY && j == highlightX) {
-                // Highlight the chosen number in bright green
-                std::cout << "\033[1;92m" << std::setw(5) << value << "\033[0m";
-            } else {
-                std::cout << std::setw(5) << value;
-            }
+            std::cout << std::setw(2) << '|' << std::setw(3) << value;
         }
         std::cout << std::endl;
     }
 
     return 0;
 }
-

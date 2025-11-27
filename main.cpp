@@ -789,13 +789,18 @@ void askUsername(std::string &username, bool &errorName,
     }
 }
 
-std::string getPassword()
+std::string getPassword(bool &accessOtherAccount)
 {
     std::string pwd;
     char c;
     while (true)
     {
         c = _getch();
+        if (c == 27) {
+            // reset and set username exist to false
+            accessOtherAccount = true;
+            break;
+        }
         if (c == 13) // Enter
         {
             std::cout << "\n";
@@ -816,17 +821,22 @@ std::string getPassword()
     return pwd;
 }
 
-void askPassword(const std::string &username, std::string &password, bool &errPassword,
-                 std::vector<std::pair<std::string, std::string>> &allowedUsers)
+int askPassword(const std::string &username, std::string &password, bool &errPassword,
+                 std::vector<std::pair<std::string, std::string>> &allowedUsers, bool &accessOtherAccount, int &LOCK_DURATION, int &DEFAULT_LOCK_DURATION, int &LOCK_INC_VALUE, bool &firstPasswordErr)
 {
-    password = getPassword();
+    password = getPassword(accessOtherAccount);
+    if (accessOtherAccount) return 0;
     errPassword = true;
+    if (firstPasswordErr) LOCK_DURATION += LOCK_INC_VALUE;
     for (auto &u : allowedUsers)
         if (u.first == username && u.second == password)
         {
             errPassword = false;
+            LOCK_DURATION = DEFAULT_LOCK_DURATION;
             break;
         }
+    firstPasswordErr = true;
+    return 0;
 }
 
 // --- Age input ---
@@ -883,7 +893,9 @@ void vote()
 int main()
 {
     int MAX_ATTEMPTS = 3;
+    int DEFAULT_LOCK_DURATION = 10;
     int LOCK_DURATION = 10;
+    int LOCK_INC_VALUE = 2;
     std::vector<std::pair<std::string, std::string>> allowedUsers = {
         {"Admin", "12345"},
         {"Voter", "12345"}};
@@ -893,6 +905,7 @@ int main()
     bool locked = false;
     bool usernameAlreadySet = false;
     bool initialClear = false;
+    bool firstPasswordErr = false;
 
     while (true)
     {
@@ -900,29 +913,30 @@ int main()
         SetConsoleOutputCP(CP_UTF8);
         SetConsoleCP(CP_UTF8);
 
-        properClear();
-        if (initialClear) {
-            properClear();
-        } else {
-            hardClear();
-            initialClear = true;
-        }
+        hardClear();
+        // properClear();
+        // if (initialClear) {
+        //     properClear();
+        // } else {
+        //     hardClear();
+        //     initialClear = true;
+        // }
 
         // Display attempts remaining at top
-        std::cout << "LOGIN ATTEMPTS REMAINING: " << attemptsLeft << "\n\n";
+        std::cout << "LOGIN ATTEMPTS REMAINING (Press 'ESC' to access other accounts): " << attemptsLeft << "\n\n";
 
         // Locked timer
         if (locked)
         {
             for (int i = LOCK_DURATION; i > 0; i--)
             {
-                properClear();
-                std::cout << "ACCOUNT LOCKED! Wait " << i << " seconds...\n";
+                hardClear();
+                std::cout << "\033[1;31mACCOUNT LOCKED! Wait " << i << " seconds...\033[0m\n";
                 std::this_thread::sleep_for(std::chrono::seconds(1));
             }
             locked = false;
             attemptsLeft = MAX_ATTEMPTS;
-            usernameAlreadySet = false; // reset username after lock
+            usernameAlreadySet = true; // reset username after lock (true or false)
             continue;
         }
 
@@ -940,7 +954,13 @@ int main()
         }
 
         std::cout << "Password: ";
-        askPassword(username, password, errorPassword, allowedUsers);
+        bool accessOtherAccounts = false;
+        askPassword(username, password, errorPassword, allowedUsers, accessOtherAccounts, LOCK_DURATION, DEFAULT_LOCK_DURATION, LOCK_INC_VALUE, firstPasswordErr);
+
+        if (accessOtherAccounts) {
+            usernameAlreadySet = false;
+            continue;
+        }
 
         if (errorPassword)
         {
